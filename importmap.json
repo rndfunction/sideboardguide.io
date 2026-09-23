@@ -1,0 +1,5 @@
+{
+  "_comment": "Reference only. Not loaded at runtime. Vue is loaded as a global via <script src> in /index.html to work around FORGE preview VFS import resolution. Our own modules use relative ESM imports, which resolve fine.",
+  "vue_global_url": "https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js",
+  "pattern": "window.Vue.reactive / window.Vue.createApp"
+}
