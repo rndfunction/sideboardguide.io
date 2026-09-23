@@ -12,6 +12,7 @@
 
 import { getFont, primaryWatermarkLetter, loadFont } from "../titlecard.js";
 import { symbolSources } from "../manasymbols.js";
+import { getTexture } from "../textures.js";
 
 const PrintTitleCard = {
   props: {
@@ -20,7 +21,14 @@ const PrintTitleCard = {
     colors: { type: Array, default: () => [] },
     fontKey: { type: String, default: "cinzel" },
     bgColor: { type: String, default: "#3a3a4a" },
-    watermarkLetter: { type: String, default: "" }
+    watermarkLetter: { type: String, default: "" },
+    // "auto" (default) picks the deck's primary color; "none" hides the
+    // watermark; any WUBRGC letter forces that specific symbol.
+    symbolKey: { type: String, default: "auto" },
+    // Texture overlay key (see textures.js). "none" = flat gradient.
+    textureKey: { type: String, default: "none" },
+    // "subtle" | "medium" | "bold"
+    textureIntensity: { type: String, default: "medium" }
   },
   computed: {
     font() {
@@ -30,15 +38,18 @@ const PrintTitleCard = {
       return this.font.family;
     },
     watermark() {
+      if (this.symbolKey === "none") return "";
       if (this.watermarkLetter) return this.watermarkLetter;
+      if (this.symbolKey && this.symbolKey !== "auto") return this.symbolKey;
       return primaryWatermarkLetter(this.colors || []);
     },
     /**
-     * If the deck has a WUBRG identity, we use the primary color's mana
-     * symbol as the giant watermark. Colorless/unknown decks fall back to
-     * the letter-based watermark.
+     * If we have a color symbol to show, use its mana symbol image as the
+     * giant watermark. Returns null when the user has chosen "none" or
+     * when there's no resolvable symbol.
      */
     watermarkPip() {
+      if (this.symbolKey === "none") return null;
       const letter = this.watermark;
       if (!letter || !/^[WUBRG]$/.test(letter)) return null;
       const src = symbolSources(letter);
@@ -92,6 +103,21 @@ const PrintTitleCard = {
       return {
         background: "radial-gradient(circle at 50% 40%, " + base + " 0%, " + dark + " 100%)",
         color: this.textColor
+      };
+    },
+    textureStyle() {
+      const t = getTexture(this.textureKey, this.textureIntensity);
+      if (!t) return null;
+      if (t.mode === "frame") {
+        return {
+          backgroundImage: t.image,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "100% 100%"
+        };
+      }
+      return {
+        backgroundImage: t.image,
+        backgroundRepeat: "repeat"
       };
     },
     pips() {
@@ -176,6 +202,13 @@ const PrintTitleCard = {
   },
   template: `
     <div class="print-card print-title-card" :style="backgroundStyle">
+      <div
+        v-if="textureStyle"
+        class="ptc-texture"
+        :class="{ 'ptc-texture-frame': textureStyle.backgroundSize === '100% 100%' }"
+        :style="textureStyle"
+        aria-hidden="true"
+      ></div>
       <div class="ptc-top">
         <span v-if="pips.length" class="ptc-pips">
           <img

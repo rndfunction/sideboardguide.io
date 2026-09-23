@@ -16,9 +16,12 @@ import {
   defaultColorForDeck,
   defaultFontKey,
   FONT_OPTIONS,
+  SYMBOL_OPTIONS,
   loadPrefs,
   savePrefs
 } from "../titlecard.js";
+import { TEXTURE_OPTIONS, INTENSITY_OPTIONS } from "../textures.js";
+import { exportCardsToPdf } from "../pdfexport.js";
 
 const MATCHUPS_PER_CARD = 3;
 const COMBINED_ROW_CAP = 50;
@@ -42,8 +45,15 @@ const PrintView = {
       includeDecklist: true,
       includeSideboard: true,
       includeTitleCard: true,
+      includeMatchups: true,
       titleColor: prefs.titleColor || null, // resolved to default on mount
-      titleFontKey: prefs.titleFontKey || defaultFontKey()
+      titleFontKey: prefs.titleFontKey || defaultFontKey(),
+      titleSymbol: prefs.titleSymbol || "auto",
+      titleTexture: prefs.titleTexture || "none",
+      titleTextureIntensity: prefs.titleTextureIntensity || "medium",
+      titleOptionsOpen: false,
+      exportingPdf: false,
+      exportError: ""
     };
   },
   mounted() {
@@ -51,10 +61,19 @@ const PrintView = {
     if (!this.titleColor) {
       this.titleColor = defaultColorForDeck(this.deck);
     }
+    document.addEventListener("click", this.onDocClick);
+    document.addEventListener("keydown", this.onDocKey);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.onDocClick);
+    document.removeEventListener("keydown", this.onDocKey);
   },
   watch: {
     titleColor() { this.persistPrefs(); },
-    titleFontKey() { this.persistPrefs(); }
+    titleFontKey() { this.persistPrefs(); },
+    titleSymbol() { this.persistPrefs(); },
+    titleTexture() { this.persistPrefs(); },
+    titleTextureIntensity() { this.persistPrefs(); }
   },
   computed: {
     colors() {
@@ -62,6 +81,28 @@ const PrintView = {
     },
     fontOptions() {
       return FONT_OPTIONS;
+    },
+    symbolOptions() {
+      return SYMBOL_OPTIONS;
+    },
+    textureOptions() {
+      return TEXTURE_OPTIONS;
+    },
+    intensityOptions() {
+      return INTENSITY_OPTIONS;
+    },
+    hasTexture() {
+      return this.titleTexture && this.titleTexture !== "none";
+    },
+    textureSummary() {
+      // A short hint shown next to the Options button so users get a
+      // glanceable summary without opening the panel.
+      const parts = [];
+      const font = (this.fontOptions || []).find((f) => f.key === this.titleFontKey);
+      if (font) parts.push(font.label);
+      const tex = (this.textureOptions || []).find((t) => t.key === this.titleTexture);
+      if (tex && tex.key !== "none") parts.push(tex.label);
+      return parts.join(" \u00b7 ");
     },
     autoSubtitle() {
       // Subtitle on the title card: the archetype name IF it differs from
@@ -75,7 +116,12 @@ const PrintView = {
     },
     pages() {
       const mus = this.matchups || [];
-      if (!mus.length) return [];
+      // Always return at least one page so the guide card is visible even
+      // before any matchups are added — it's the artifact the user is
+      // building, not a hidden layer that appears once data exists.
+      if (!mus.length) {
+        return [{ matchups: [], rows: [] }];
+      }
       const pages = [];
       for (let i = 0; i < mus.length; i += MATCHUPS_PER_CARD) {
         const pageMatchups = mus.slice(i, i + MATCHUPS_PER_CARD);
@@ -101,7 +147,7 @@ const PrintView = {
       return this.sideboardRows.reduce((a, r) => a + r.count, 0);
     },
     guideCardCount() {
-      return this.pages.length;
+      return this.includeMatchups ? this.pages.length : 0;
     },
     inventoryCardCount() {
       return this.inventoryCards.length;
@@ -111,6 +157,9 @@ const PrintView = {
     },
     totalCards() {
       return this.titleCardCount + this.inventoryCardCount + this.guideCardCount;
+    },
+    hasAnyMatchups() {
+      return (this.matchups || []).length > 0;
     },
     inventoryCards() {
       const wantMain = this.includeDecklist && this.decklistRows.length > 0;
@@ -151,7 +200,10 @@ const PrintView = {
     persistPrefs() {
       savePrefs({
         titleColor: this.titleColor,
-        titleFontKey: this.titleFontKey
+        titleFontKey: this.titleFontKey,
+        titleSymbol: this.titleSymbol,
+        titleTexture: this.titleTexture,
+        titleTextureIntensity: this.titleTextureIntensity
       });
     },
     /**
@@ -241,8 +293,48 @@ const PrintView = {
     onPrint() {
       window.print();
     },
+    async onExportPdf() {
+      if (this.exportingPdf) return;
+      this.exportingPdf = true;
+      this.exportError = "";
+      try {
+        // Grab the currently-rendered print cards from this view.
+        const root = this.$el;
+        const cards = root ? Array.from(root.querySelectorAll(".print-card")) : [];
+        if (!cards.length) {
+          throw new Error("Nothing to export — enable at least one card type.");
+        }
+        const safe = (this.deckName || "untitled-deck")
+          .replace(/[^a-z0-9]+/gi, "-")
+          .toLowerCase();
+        await exportCardsToPdf(cards, safe + "-sideboard-guide.pdf", (done, total) => {
+          // Could surface progress here; not essential.
+        });
+      } catch (err) {
+        this.exportError = String(err && err.message ? err.message : err);
+      } finally {
+        this.exportingPdf = false;
+      }
+    },
     resetTitleColor() {
       this.titleColor = defaultColorForDeck(this.deck);
+    },
+    toggleTitleOptions() {
+      this.titleOptionsOpen = !this.titleOptionsOpen;
+    },
+    closeTitleOptions() {
+      this.titleOptionsOpen = false;
+    },
+    onDocClick(evt) {
+      if (!this.titleOptionsOpen) return;
+      const panel = this.$refs.titleOptionsPanel;
+      const btn = this.$refs.titleOptionsBtn;
+      if (panel && panel.contains(evt.target)) return;
+      if (btn && btn.contains(evt.target)) return;
+      this.closeTitleOptions();
+    },
+    onDocKey(evt) {
+      if (evt.key === "Escape") this.closeTitleOptions();
     }
   },
   components: { PrintCard, PrintListCard, PrintTitleCard },
@@ -255,12 +347,41 @@ const PrintView = {
             {{ totalCards }} card{{ totalCards === 1 ? '' : 's' }} &middot;
             {{ guideCardCount }} matchup-guide card{{ guideCardCount === 1 ? '' : 's' }}
           </span>
-          <button type="button" class="usa-button" @click="onPrint">Print</button>
+          <button
+            type="button"
+            class="usa-button print-icon-btn"
+            @click="onPrint"
+            aria-label="Print"
+            title="Print"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+            <span class="print-icon-label">Print</span>
+          </button>
+          <button
+            type="button"
+            class="usa-button print-icon-btn"
+            :disabled="exportingPdf"
+            @click="onExportPdf"
+            :aria-label="exportingPdf ? 'Exporting PDF...' : 'Download PDF'"
+            :title="exportingPdf ? 'Exporting PDF...' : 'Download PDF'"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <polyline points="9 15 12 18 15 15"></polyline>
+            </svg>
+            <span class="print-icon-label">{{ exportingPdf ? "Exporting..." : "PDF" }}</span>
+          </button>
           <button type="button" class="usa-button usa-button--outline" @click="$emit('close')">Close</button>
+          <span v-if="exportError" class="print-export-err">{{ exportError }}</span>
         </div>
 
         <div class="print-view-controls-row">
-          <span class="print-include-label">Include:</span>
           <label
             class="print-chip"
             :class="{ 'print-chip-on': includeTitleCard }"
@@ -286,6 +407,14 @@ const PrintView = {
             <span class="print-chip-count" v-if="sideboardRows.length">({{ sideboardTotal }})</span>
             <span class="print-chip-count" v-else>(empty)</span>
           </label>
+          <label
+            class="print-chip"
+            :class="{ 'print-chip-on': includeMatchups }"
+          >
+            <input type="checkbox" v-model="includeMatchups" />
+            <span class="print-chip-label">Matchups</span>
+            <span class="print-chip-count">({{ (matchups || []).length }})</span>
+          </label>
           <span class="print-tip">
             Tip: in the print dialog choose "Actual size" (not "Fit to page") so the sleeve-sized dimensions are preserved.
           </span>
@@ -293,24 +422,56 @@ const PrintView = {
 
         <div v-if="includeTitleCard" class="print-view-controls-row title-card-controls">
           <span class="print-include-label">Title card:</span>
-          <label class="title-control">
-            <span class="title-control-label">Color</span>
-            <input type="color" v-model="titleColor" />
-          </label>
-          <button type="button" class="title-reset-btn" @click="resetTitleColor" title="Reset to auto-derived color">
-            Auto
-          </button>
-          <label class="title-control">
-            <span class="title-control-label">Font</span>
-            <select v-model="titleFontKey">
-              <option v-for="f in fontOptions" :key="f.key" :value="f.key">{{ f.label }}</option>
-            </select>
-          </label>
+          <button
+            ref="titleOptionsBtn"
+            type="button"
+            class="usa-button usa-button--outline title-options-btn"
+            @click="toggleTitleOptions"
+          >{{ titleOptionsOpen ? "Hide options" : "Customize options" }}</button>
+          <span class="title-options-hint">{{ textureSummary }}</span>
+
+          <div
+            v-if="titleOptionsOpen"
+            ref="titleOptionsPanel"
+            class="title-options-panel"
+          >
+            <div class="title-options-row">
+              <span class="title-options-label">Color</span>
+              <input type="color" v-model="titleColor" aria-label="Background color" />
+              <button type="button" class="title-reset-btn" @click="resetTitleColor" title="Reset to auto-derived color">
+                Auto
+              </button>
+            </div>
+            <div class="title-options-row">
+              <span class="title-options-label">Font</span>
+              <select v-model="titleFontKey" aria-label="Font">
+                <option v-for="f in fontOptions" :key="f.key" :value="f.key">{{ f.label }}</option>
+              </select>
+            </div>
+            <div class="title-options-row">
+              <span class="title-options-label">Symbol</span>
+              <select v-model="titleSymbol" aria-label="Mana symbol">
+                <option v-for="s in symbolOptions" :key="s.key" :value="s.key">{{ s.label }}</option>
+              </select>
+            </div>
+            <div class="title-options-row">
+              <span class="title-options-label">Texture</span>
+              <select v-model="titleTexture" aria-label="Texture">
+                <option v-for="t in textureOptions" :key="t.key" :value="t.key">{{ t.label }}</option>
+              </select>
+            </div>
+            <div v-if="hasTexture" class="title-options-row">
+              <span class="title-options-label">Intensity</span>
+              <select v-model="titleTextureIntensity" aria-label="Texture intensity">
+                <option v-for="i in intensityOptions" :key="i.key" :value="i.key">{{ i.label }}</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div v-if="!pages.length && !inventoryCardCount && !includeTitleCard" class="empty-state">
-        Nothing to print. Enable at least one card above.
+      <div v-if="totalCards === 0" class="empty-state">
+        Nothing selected to print. Enable at least one card type above.
       </div>
 
       <div v-else class="print-cards-grid">
@@ -321,6 +482,9 @@ const PrintView = {
           :colors="colors"
           :font-key="titleFontKey"
           :bg-color="titleColor || '#3a3a4a'"
+          :symbol-key="titleSymbol"
+          :texture-key="titleTexture"
+          :texture-intensity="titleTextureIntensity"
         ></print-title-card>
 
         <print-list-card
@@ -333,7 +497,7 @@ const PrintView = {
         ></print-list-card>
 
         <print-card
-          v-for="(page, idx) in pages"
+          v-for="(page, idx) in (includeMatchups ? pages : [])"
           :key="'pg-' + idx"
           :deck-name="deckName || 'Untitled Deck'"
           :format="format"

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MTG Deck Guide Builder</title>
+<title>Sideboard Guide Builder</title>
 <link rel="stylesheet" href="https://unpkg.com/@trussworks/react-uswds@3.0.0/lib/css/styles.css">
 <link rel="stylesheet" href="css/app.css">
 <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
@@ -17,7 +17,7 @@
         <p class="usa-intro">Paste a decklist. Build a sideboard guide. Print sleeve-sized cards for the deckbox.</p>
       </header>
 
-      <div class="app-two-col">
+      <div class="app-two-col" :class="{ 'app-two-col-loaded': enriched }">
         <!-- ============================================================
              Left column: the workspace. Input, buttons, and the grid
              all stack here, top to bottom.
@@ -89,7 +89,7 @@
       </div>
 
       <footer class="usa-footer__primary-section" v-if="!parsed">
-        <p></p>
+        <p>No data leaves your browser except card lookups to Scryfall.</p>
       </footer>
     </main>
   </div>

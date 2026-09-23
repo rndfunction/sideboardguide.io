@@ -1,20 +1,22 @@
-// DeckGrid: single unified grid for the deck list + sideboard guide.
+// DeckGrid: matchups on the left, plan focus on the right.
 //
 // Layout:
-//   +----------------+-------+-------+-------+-----------+
-//   | Card           | MU 1  | MU 2  | ...   | + Add MU  |
-//   +----------------+-------+-------+-------+-----------+
-//   | 4 Lightning ...| OUT 4 |       |       |           |
-//   | 4 Ponder       |       | IN 2  |       |           |
-//   | ...            |       |       |       |           |
+//   +------------------------+---------------------------------------+
+//   | Matchups               | vs Mono-Red Burn                      |
+//   | [ Mono-Red Burn ]  *   |                                       |
+//   | [ Affinity ]           | Card        | Plan                    |
+//   | [ Bogles ]             | 4 Bolt      | OUT 4                   |
+//   | ...                    | 4 Ponder    | IN 2                    |
+//   | [+ Add matchup]        | ...                                   |
+//   |                        |                                       |
+//   |                        | Board totals: IN 4 / OUT 4 / Bal 0    |
+//   +------------------------+---------------------------------------+
 //
-// - Cards grouped by type (Creature, Instant, ..., Land) with a divider row.
-// - Matchup columns start empty. "+ Add matchup" opens an inline input; on
-//   commit, the new column appears at the right.
-// - Click a cell to cycle (context-aware: maindeck -> OUT first,
-//   sideboard -> IN first).
-// - Right-click a cell (or the pencil chip) to set a partial count.
-// - Header deck-name field is editable and emits update:deckName.
+// - The left list shows every matchup. Click to focus.
+// - Rename/remove affordances appear on the focused matchup.
+// - The right pane shows the selected matchup's plan for every card.
+// - Click a cell to cycle (maindeck -> OUT first, sideboard -> IN first).
+// - Right-click a cell for partial counts.
 
 const TYPE_ORDER = ["Creature", "Planeswalker", "Instant", "Sorcery", "Enchantment", "Artifact", "Battle", "Land", "Other"];
 
@@ -60,19 +62,31 @@ const DeckGrid = {
       renamingMatchup: null,
       renameDraft: "",
       popover: null, // { cardName, matchup, top, left }
-      localName: ""
+      localName: "",
+      selectedMatchup: null
     };
   },
   watch: {
     deckName: {
       immediate: true,
       handler(v) { this.localName = v || ""; }
+    },
+    // Keep the selected matchup valid when the list changes.
+    matchups: {
+      immediate: true,
+      handler(list) {
+        if (!list || !list.length) {
+          this.selectedMatchup = null;
+          return;
+        }
+        if (!this.selectedMatchup || !list.includes(this.selectedMatchup)) {
+          this.selectedMatchup = list[0];
+        }
+      }
     }
   },
   computed: {
     sections() {
-      // Merge main + side into one ordered set of sections.
-      // Main first, then a synthetic "Sideboard" divider, then side.
       const mainSections = this.sectionsFor(this.deck.mainboard || []);
       const sideSections = this.sectionsFor(this.deck.sideboard || []);
       const out = [];
@@ -91,6 +105,12 @@ const DeckGrid = {
       add(this.deck.mainboard || []);
       add(this.deck.sideboard || []);
       return m;
+    },
+    activeMatchup() {
+      if (!this.matchups || !this.matchups.length) return null;
+      return this.selectedMatchup && this.matchups.includes(this.selectedMatchup)
+        ? this.selectedMatchup
+        : this.matchups[0];
     }
   },
   mounted() {
@@ -189,21 +209,34 @@ const DeckGrid = {
         partial: !!partial
       };
     },
-    onCellClick(cardName, matchup, evt) {
+    onCellClick(cardName, evt) {
+      const matchup = this.activeMatchup;
+      if (!matchup) return;
       if (this.popover && this.popover.cardName === cardName && this.popover.matchup === matchup) return;
       this.closePopover();
       const section = this.isMaindeck(cardName) ? "main" : "side";
       this.$emit("toggle-card", cardName, matchup, section);
     },
-    onCellContext(cardName, matchup, evt) {
+    onCellContext(cardName, evt) {
+      const matchup = this.activeMatchup;
+      if (!matchup) return;
       evt.preventDefault();
       evt.stopPropagation();
       this.openPopover(cardName, matchup, evt.currentTarget);
     },
-    onEditChip(cardName, matchup, evt) {
+    onEditChip(cardName, evt) {
+      const matchup = this.activeMatchup;
+      if (!matchup) return;
       evt.preventDefault();
       evt.stopPropagation();
       this.openPopover(cardName, matchup, evt.currentTarget.closest(".toggle-cell"));
+    },
+
+    // --- Matchup selection ---
+    selectMatchup(name) {
+      if (this.selectedMatchup === name) return;
+      this.selectedMatchup = name;
+      this.closePopover();
     },
 
     // --- Add matchup inline ---
@@ -279,7 +312,6 @@ const DeckGrid = {
       this.$emit("set-card-plan", this.popover.cardName, this.popover.matchup, dir, count);
       this.closePopover();
     },
-    /** Whether the popover's target card is in the maindeck. */
     popoverIsMain() {
       if (!this.popover) return true;
       return this.isMaindeck(this.popover.cardName);
@@ -312,10 +344,8 @@ const DeckGrid = {
       this.$emit("update:deck-name", v);
     },
 
-    /**
-     * Sum of IN counts across all cards (main + side) for a matchup.
-     */
     inTotal(matchup) {
+      if (!matchup) return 0;
       let total = 0;
       const visit = (list) => {
         for (const e of list) {
@@ -327,10 +357,8 @@ const DeckGrid = {
       visit(this.deck.sideboard || []);
       return total;
     },
-    /**
-     * Sum of OUT counts across all cards (main + side) for a matchup.
-     */
     outTotal(matchup) {
+      if (!matchup) return 0;
       let total = 0;
       const visit = (list) => {
         for (const e of list) {
@@ -342,10 +370,6 @@ const DeckGrid = {
       visit(this.deck.sideboard || []);
       return total;
     },
-    /**
-     * Balance check: IN - OUT should be 0 for a valid plan. Anything else
-     * means the deck no longer has 60 cards after sideboarding.
-     */
     balanceFor(matchup) {
       return this.inTotal(matchup) - this.outTotal(matchup);
     }
@@ -363,148 +387,143 @@ const DeckGrid = {
         />
       </header>
 
-      <div class="guide-table-wrap">
-        <table class="guide-table">
-          <thead>
-            <tr>
-              <th class="card-col">Card</th>
-              <th v-for="m in matchups" :key="m" class="matchup-th">
-                <div class="matchup-th-inner">
-                  <template v-if="renamingMatchup === m">
-                    <input
-                      ref="renameInput"
-                      type="text"
-                      class="matchup-rename-input"
-                      v-model="renameDraft"
-                      @keydown.enter.prevent="commitRenameMatchup"
-                      @keydown.esc.prevent="cancelRenameMatchup"
-                      @blur="commitRenameMatchup"
-                    />
-                  </template>
-                  <template v-else>
-                    <span
-                      class="matchup-name"
-                      :title="m + ' \u2014 double-click to rename'"
-                      @dblclick="beginRenameMatchup(m, $event)"
-                    >{{ m }}</span>
-                    <button
-                      type="button"
-                      class="matchup-edit"
-                      :title="'Rename ' + m"
-                      @click="beginRenameMatchup(m, $event)"
-                    >&#9998;</button>
-                    <button
-                      type="button"
-                      class="matchup-remove"
-                      :title="'Remove ' + m"
-                      @click="onRemoveMatchup(m, $event)"
-                    >&times;</button>
-                  </template>
-                </div>
-              </th>
-              <th class="add-matchup-th">
-                <template v-if="addingMatchup">
-                  <input
-                    ref="newMatchupInput"
-                    type="text"
-                    class="matchup-rename-input"
-                    v-model="newMatchup"
-                    placeholder="Matchup name"
-                    @keydown.enter.prevent="commitAddMatchup"
-                    @keydown.esc.prevent="cancelAddMatchup"
-                    @blur="commitAddMatchup"
-                  />
-                </template>
-                <template v-else>
-                  <button
-                    type="button"
-                    class="add-matchup-btn"
-                    @click="beginAddMatchup"
-                  >+ Add matchup</button>
-                </template>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="(section, si) in sections" :key="'sec-' + si">
-              <tr v-if="section.isDivider" class="section-row sideboard-divider">
-                <td :colspan="matchups.length + 2">Sideboard</td>
-              </tr>
-              <tr v-else class="section-row">
-                <td :colspan="matchups.length + 2">{{ section.bucket }}</td>
-              </tr>
-              <tr v-for="row in section.rows" :key="'r-' + si + '-' + row.name">
-                <th class="card-col">
-                  <span class="card-count-badge">{{ row.count }}</span>{{ row.name }}
-                <span class="mana-cost" v-if="row.card && row.card.mana_cost">
-                  <span
-                    v-for="(sym, i) in manaSymbols(row.card.mana_cost)"
-                    :key="i"
-                    class="mana-symbol"
-                    :class="manaClass(sym)"
-                  >{{ symbolText(sym) }}</span>
-                </span>
-                </th>
-                <td
-                  v-for="m in matchups"
-                  :key="'c-' + row.name + '-' + m"
-                  class="toggle-cell"
-                  :class="cellClass(row.name, m)"
-                  @click="onCellClick(row.name, m, $event)"
-                  @contextmenu="onCellContext(row.name, m, $event)"
-                  :title="'Left-click to cycle. Right-click for partial counts.'"
-                >
-                  <span>{{ cellLabel(row.name, m) }}</span>
-                  <span
-                    v-if="entryFor(row.name, m)"
-                    class="edit-hint"
-                    @click="onEditChip(row.name, m, $event)"
-                    title="Edit partial count"
-                  >&#9998;</span>
-                </td>
-                <td class="add-matchup-filler"></td>
-              </tr>
-            </template>
+      <div class="matchup-tabs" role="tablist" aria-label="Matchups">
+        <span class="matchup-tabs-label">Matchups:</span>
 
-            <tr v-if="matchups.length" class="section-row net-row">
-              <td :colspan="matchups.length + 2">Board totals</td>
-            </tr>
-            <tr v-if="matchups.length">
-              <th class="card-col">
-                <span class="net-in-label">IN</span>
-              </th>
-              <td
-                v-for="m in matchups"
-                :key="'in-total-' + m"
-                class="net-cell net-in-cell"
-              >{{ inTotal(m) > 0 ? '+' + inTotal(m) : '' }}</td>
-              <td class="add-matchup-filler"></td>
-            </tr>
-            <tr v-if="matchups.length">
-              <th class="card-col">
-                <span class="net-out-label">OUT</span>
-              </th>
-              <td
-                v-for="m in matchups"
-                :key="'out-total-' + m"
-                class="net-cell net-out-cell"
-              >{{ outTotal(m) > 0 ? '-' + outTotal(m) : '' }}</td>
-              <td class="add-matchup-filler"></td>
-            </tr>
-            <tr v-if="matchups.length">
-              <th class="card-col">
-                <span class="net-balance-label">Balance</span>
-              </th>
-              <td
-                v-for="m in matchups"
-                :key="'bal-' + m"
-                class="net-cell net-balance-cell"
-                :class="{ 'net-ok': balanceFor(m) === 0, 'net-bad': balanceFor(m) !== 0 }"
-              >{{ balanceFor(m) === 0 ? '0' : (balanceFor(m) > 0 ? '+' + balanceFor(m) : balanceFor(m)) }}</td>
-              <td class="add-matchup-filler"></td>
-            </tr>
-          </tbody>
-        </table>
+        <button
+          v-for="m in matchups"
+          :key="m"
+          type="button"
+          role="tab"
+          :aria-selected="m === activeMatchup ? 'true' : 'false'"
+          class="matchup-tab"
+          :class="{ 'is-active': m === activeMatchup }"
+          @click="selectMatchup(m)"
+          @dblclick="beginRenameMatchup(m, $event)"
+        >
+          <template v-if="renamingMatchup === m">
+            <input
+              ref="renameInput"
+              type="text"
+              class="matchup-tab-rename"
+              v-model="renameDraft"
+              @click.stop
+              @keydown.enter.prevent="commitRenameMatchup"
+              @keydown.esc.prevent="cancelRenameMatchup"
+              @blur="commitRenameMatchup"
+            />
+          </template>
+          <template v-else>
+            <span class="matchup-tab-name">{{ m }}</span>
+            <span
+              class="matchup-tab-remove"
+              :title="'Remove ' + m"
+              @click.stop="onRemoveMatchup(m, $event)"
+            >&times;</span>
+          </template>
+        </button>
+
+        <template v-if="addingMatchup">
+          <input
+            ref="newMatchupInput"
+            type="text"
+            class="matchup-tab-rename"
+            v-model="newMatchup"
+            placeholder="Matchup name"
+            aria-label="New matchup name"
+            @keydown.enter.prevent="commitAddMatchup"
+            @keydown.esc.prevent="cancelAddMatchup"
+            @blur="commitAddMatchup"
+          />
+        </template>
+        <template v-else>
+          <button
+            type="button"
+            class="matchup-tab matchup-tab-add"
+            @click="beginAddMatchup"
+          >+ Add matchup</button>
+        </template>
+      </div>
+
+      <div class="matchup-focus">
+        <header class="matchup-focus-header">
+          <template v-if="activeMatchup">
+            <span class="matchup-focus-label">vs</span>
+            <span class="matchup-focus-name">{{ activeMatchup }}</span>
+            <span
+              class="matchup-focus-balance"
+              :class="{ 'net-ok': balanceFor(activeMatchup) === 0, 'net-bad': balanceFor(activeMatchup) !== 0 }"
+            >
+              IN {{ inTotal(activeMatchup) }} &middot; OUT {{ outTotal(activeMatchup) }}
+              <template v-if="balanceFor(activeMatchup) !== 0">
+                &middot; off by {{ balanceFor(activeMatchup) > 0 ? '+' + balanceFor(activeMatchup) : balanceFor(activeMatchup) }}
+              </template>
+              <template v-else>
+                &middot; balanced
+              </template>
+            </span>
+          </template>
+          <template v-else>
+            <span class="matchup-focus-name">Decklist</span>
+            <span class="matchup-focus-balance matchup-focus-hint">
+              Add a matchup above to start planning.
+            </span>
+          </template>
+        </header>
+
+        <div class="guide-table-wrap">
+          <table class="guide-table">
+            <thead>
+              <tr>
+                <th class="card-col">Card</th>
+                <th class="matchup-plan-col">Plan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-for="(section, si) in sections" :key="'sec-' + si">
+                <tr v-if="section.isDivider" class="section-row sideboard-divider">
+                  <td colspan="2">Sideboard</td>
+                </tr>
+                <tr v-else class="section-row">
+                  <td colspan="2">{{ section.bucket }}</td>
+                </tr>
+                <tr v-for="row in section.rows" :key="'r-' + si + '-' + row.name">
+                  <th class="card-col">
+                    <span class="card-count-badge">{{ row.count }}</span>{{ row.name }}
+                    <span class="mana-cost" v-if="row.card && row.card.mana_cost">
+                      <span
+                        v-for="(sym, i) in manaSymbols(row.card.mana_cost)"
+                        :key="i"
+                        class="mana-symbol"
+                        :class="manaClass(sym)"
+                      >{{ symbolText(sym) }}</span>
+                    </span>
+                  </th>
+                  <td
+                    class="toggle-cell"
+                    :class="activeMatchup ? cellClass(row.name, activeMatchup) : 'toggle-cell-idle'"
+                    @click="activeMatchup && onCellClick(row.name, $event)"
+                    @contextmenu="activeMatchup && onCellContext(row.name, $event)"
+                    :title="activeMatchup ? 'Left-click to cycle. Right-click for partial counts.' : 'Add a matchup above to plan this card.'"
+                  >
+                    <template v-if="activeMatchup">
+                      <span>{{ cellLabel(row.name, activeMatchup) }}</span>
+                      <span
+                        v-if="entryFor(row.name, activeMatchup)"
+                        class="edit-hint"
+                        @click="onEditChip(row.name, $event)"
+                        title="Edit partial count"
+                      >&#9998;</span>
+                    </template>
+                    <template v-else>
+                      <span class="toggle-cell-placeholder">&mdash;</span>
+                    </template>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div

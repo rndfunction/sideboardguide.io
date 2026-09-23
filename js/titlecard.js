@@ -107,6 +107,19 @@ const COLOR_BACKGROUNDS = {
 // Letter glyphs used as the giant watermark, in MTG flavor.
 const COLOR_LETTERS = { W: "W", U: "U", B: "B", R: "R", G: "G" };
 
+// Options for the title card's watermark symbol dropdown. Kept as a list
+// so future additions (guild symbols, set icons, custom art) are trivial.
+export const SYMBOL_OPTIONS = [
+  { key: "auto", label: "Auto (deck color)" },
+  { key: "none", label: "None" },
+  { key: "W", label: "White" },
+  { key: "U", label: "Blue" },
+  { key: "B", label: "Black" },
+  { key: "R", label: "Red" },
+  { key: "G", label: "Green" },
+  { key: "C", label: "Colorless" }
+];
+
 function sortedColorKey(colors) {
   if (!colors || !colors.length) return "";
   return colors.slice().sort().join("");
@@ -162,12 +175,7 @@ export function loadFont(fontKey) {
   document.head.appendChild(link);
 }
 
-/**
- * Load every font in the list — used so the picker can show real previews.
- */
-export function loadAllFonts() {
-  for (const f of FONT_OPTIONS) loadFont(f.key);
-}
+
 
 /**
  * Look up a font definition by key. Falls back to system.
@@ -199,6 +207,3 @@ export function savePrefs(prefs) {
   }
 }
 
-export function clearPrefs() {
-  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-}

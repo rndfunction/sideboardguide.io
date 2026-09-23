@@ -2,8 +2,9 @@
 // Burn-style sample. Uses the actual PrintTitleCard / PrintListCard /
 // PrintCard components so it can never drift from production output.
 //
-// Each card is wrapped in .sample-mini-wrap and scaled with a CSS
-// transform so it fits inside the preview pane at a smaller size.
+// The sideboard plan honors the real rule: cards IN must equal cards OUT
+// for every matchup, since you can't add more than you remove without
+// going over 60.
 
 import PrintTitleCard from "./PrintTitleCard.js";
 import PrintListCard from "./PrintListCard.js";
@@ -42,26 +43,28 @@ const SampleCards = {
         { count: 3, name: "Anger of the Gods" },
         { count: 2, name: "Deflecting Palm" }
       ],
-      // 3 matchups to match the current MATCHUPS_PER_CARD setting.
       matchups: ["Murktide", "Amulet Titan", "Rhinos"],
-      // Simplified plan, per matchup, per card: dir + count.
+      // Each matchup's IN total equals its OUT total.
+      //   Murktide:     OUT 5 (Blaze 3, Skewer 2) = IN 5 (Vortex 3, Moon 2)
+      //   Amulet Titan: OUT 6 (Swiftspear 4, Blaze 2) = IN 6 (Moon 3, Palm 3)
+      //   Rhinos:       OUT 4 (Eidolon 3, Blaze 1) = IN 4 (Anger 3, Skullcrack 1)
       plan: {
         "Murktide": {
           "Searing Blaze": { dir: "out", count: 3 },
-          "Roiling Vortex": { dir: "in", count: 3 },
           "Skewer the Critics": { dir: "out", count: 2 },
+          "Roiling Vortex": { dir: "in", count: 3 },
           "Blood Moon": { dir: "in", count: 2 }
         },
         "Amulet Titan": {
           "Monastery Swiftspear": { dir: "out", count: 4 },
-          "Blood Moon": { dir: "in", count: 3 },
           "Searing Blaze": { dir: "out", count: 2 },
-          "Deflecting Palm": { dir: "in", count: 2 }
+          "Blood Moon": { dir: "in", count: 3 },
+          "Deflecting Palm": { dir: "in", count: 3 }
         },
         "Rhinos": {
           "Eidolon of the Great Revel": { dir: "out", count: 3 },
-          "Anger of the Gods": { dir: "in", count: 3 },
           "Searing Blaze": { dir: "out", count: 1 },
+          "Anger of the Gods": { dir: "in", count: 3 },
           "Skullcrack": { dir: "in", count: 1 }
         }
       }
@@ -124,7 +127,6 @@ const SampleCards = {
         <div class="sample-mini-wrap">
           <print-title-card
             :deck-name="deckName"
-            subtitle="Mono-Red Aggro"
             :colors="colors"
             :font-key="fontKey"
             :bg-color="titleColor"

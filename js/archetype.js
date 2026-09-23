@@ -316,4 +316,4 @@ export function identifyDeck(enriched) {
   return fallback || "Untitled Deck";
 }
 
-export const SIGNATURE_CARD_COUNT = Object.keys(SIGNATURE_CARDS).length;
+// (No public constant exported — SIGNATURE_CARDS is internal.)

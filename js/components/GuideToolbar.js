@@ -81,22 +81,27 @@ const GuideToolbar = {
   },
   template: `
     <div class="guide-toolbar">
-      <div class="toolbar-row">
-        <button type="button" class="usa-button usa-button--outline" @click="onSave">Save</button>
-        <button type="button" class="usa-button usa-button--outline" @click="onLoad">Load</button>
-        <button type="button" class="usa-button usa-button--outline" @click="onClear">Forget</button>
-        <button type="button" class="usa-button" @click="onTogglePrint">
-          {{ printOpen ? "Hide print preview" : "Show print preview" }}
-        </button>
+      <div class="toolbar-row toolbar-row-primary">
+        <label class="usa-sr-only" for="preset-format">Format</label>
+        <select id="preset-format" class="usa-select toolbar-format-select" v-model="presetFormat">
+          <option v-for="f in presetFormats" :key="f" :value="f">Format: {{ f }}</option>
+        </select>
+        <div class="toolbar-actions">
+          <button type="button" class="usa-button usa-button--outline" @click="onSave">Save</button>
+          <button type="button" class="usa-button usa-button--outline" @click="onLoad">Load</button>
+          <button type="button" class="usa-button usa-button--outline" @click="onClear">Forget</button>
+          <button type="button" class="usa-button" @click="onTogglePrint">
+            {{ printOpen ? "Hide print preview" : "Show print preview" }}
+          </button>
+        </div>
         <span v-if="lastMessage" class="toolbar-msg" :class="lastMessageClass">{{ lastMessage }}</span>
       </div>
 
-      <div class="toolbar-row">
-        <label class="usa-sr-only" for="preset-format">Format</label>
-        <select id="preset-format" class="usa-select" v-model="presetFormat" style="max-width:12rem;">
-          <option v-for="f in presetFormats" :key="f" :value="f">{{ f }}</option>
-        </select>
+      <div class="toolbar-row toolbar-row-preset-label">
         <span class="preset-label">Quick-add:</span>
+      </div>
+
+      <div class="toolbar-row toolbar-row-presets">
         <button
           v-for="m in newPresets.slice(0, 10)"
           :key="m"

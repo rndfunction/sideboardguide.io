@@ -169,7 +169,7 @@ export async function lookupCards(names, onProgress) {
   return result;
 }
 
-export function clearCache() {
+function clearCache() {
   const keys = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);

@@ -190,13 +190,3 @@ export function findLocal(name) {
   return INDEX.get(String(name).trim().toLowerCase()) || null;
 }
 
-/**
- * Return all card names in the DB (for debug / coverage info).
- */
-export function listLocalNames() {
-  return Array.from(INDEX.values()).map((c) => c.name);
-}
-
-export function localDbSize() {
-  return INDEX.size;
-}

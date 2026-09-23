@@ -50,7 +50,7 @@ export const PRESET_MATCHUPS = {
 export const FORMAT_LIST = Object.keys(PRESET_MATCHUPS);
 
 // Default format for first-time users.
-export const DEFAULT_FORMAT = "Pauper";
+const DEFAULT_FORMAT = "Pauper";
 
 /**
  * Read the last-used format from localStorage, or fall back to DEFAULT_FORMAT.

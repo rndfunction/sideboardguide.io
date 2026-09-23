@@ -1,4 +1,4 @@
-/* MTG Deck Guide Builder — custom styles layered on USWDS */
+/* Sideboard Guide Builder — custom styles layered on USWDS */
 
 :root {
   --mtg-white: #f7f7f2;
@@ -133,7 +133,7 @@ body {
 
 /* Deck input */
 .deck-input {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .deck-input-collapsed {
@@ -164,12 +164,23 @@ body {
 
 .deck-input-grid {
   display: grid;
+  /* Textarea flexes, sidebar keeps a fixed 14rem so its buttons never
+     squish. When the workspace column is narrow the textarea shrinks
+     proportionally. */
   grid-template-columns: minmax(0, 1fr) 14rem;
   gap: 1rem;
   align-items: stretch;
 }
 
 @media (max-width: 640px) {
+  .deck-input-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* On mid-width screens the sidebar may be too wide for a narrow
+   workspace; stack them vertically before things get crushed. */
+@media (max-width: 1200px) {
   .deck-input-grid {
     grid-template-columns: 1fr;
   }
@@ -399,13 +410,19 @@ body {
 
 table.guide-table {
   border-collapse: collapse;
-  width: 100%;
+  /* min-width lets the table exceed its container when many matchup
+     columns are present; the wrapper's overflow-x scrolls. */
+  min-width: 100%;
   font-size: 0.85rem;
   table-layout: fixed;
 }
 
 /* Matchup header cell: cap width, ellipsize long names, keep edit/remove buttons. */
 .matchup-th {
+  /* Floor so matchup cells stay readable ("IN 4" / "OUT 2"). When many
+     are present the table grows past its container and the wrapper
+     scrolls horizontally. */
+  min-width: 3.5rem;
   max-width: 12rem;
 }
 
@@ -453,7 +470,10 @@ table.guide-table {
 
 /* Card name column: ellipsize if too long. */
 table.guide-table th.card-col {
-  max-width: 14rem;
+  /* In the per-matchup focus view there's only one Plan column, so the
+     card column can flex up to fill available width instead of being
+     pinned to 14rem. */
+  width: auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -486,7 +506,7 @@ table.guide-table th.card-col {
   background: var(--site-surface-alt);
   color: var(--site-text);
   z-index: 3;
-  min-width: 200px;
+  /* width/min-width already set above; keep sticky behavior intact. */
 }
 
 table.guide-table thead th.card-col {
@@ -644,7 +664,9 @@ table.guide-table tr.section-row td {
   min-width: 20px;
   text-align: center;
   font-weight: 700;
-  color: #1a1a2e;
+  /* Match the surrounding card-name text so the count reads as part of
+     the label rather than fading into the background. */
+  color: var(--site-text);
   margin-right: 0.35rem;
 }
 
@@ -659,9 +681,12 @@ table.guide-table tr.section-row td {
   background: var(--site-surface);
   border: 1px solid var(--site-border);
   border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin: 1.5rem 0 1rem;
+  padding: 0.6rem 1rem;
+  margin: 0 0 0.75rem;
 }
+
+/* (Removed: prior attempt to merge toolbar and print controls assumed
+   they were stacked in the same column; they are not.) */
 
 .toolbar-row {
   display: flex;
@@ -672,6 +697,34 @@ table.guide-table tr.section-row td {
 }
 
 .toolbar-row:last-child { margin-bottom: 0; }
+
+/* Primary row: Format dropdown on the left, action buttons pushed right. */
+.toolbar-row-primary {
+  gap: 0.75rem;
+}
+
+.toolbar-format-select {
+  max-width: 14rem;
+  flex: 0 0 auto;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-left: auto;      /* push the buttons to the right edge */
+  flex-wrap: wrap;
+}
+
+/* Quick-add label row: its own line, compact. */
+.toolbar-row-preset-label {
+  margin-bottom: 0.25rem;
+}
+
+/* Presets row: chips flow freely below the format selector. */
+.toolbar-row-presets {
+  gap: 0.35rem;
+}
 
 .toolbar-row .usa-button {
   margin-right: 0;
@@ -741,7 +794,7 @@ table.guide-table tr.section-row td {
    ============================================================ */
 
 .print-view {
-  margin: 2rem 0;
+  margin: 0.75rem 0 1rem;
 }
 
 .print-view-controls {
@@ -749,12 +802,110 @@ table.guide-table tr.section-row td {
   gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--site-surface-alt);
-  border: 1px solid var(--site-border);
-  border-radius: 8px;
-  color: var(--site-text);
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+  /* Softer treatment: no heavy box, just a thin rule to separate the
+     controls from the printable cards below. */
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  color: #f5f2ea;
+  /* The controls panel uses light-themed native UI (selects, checkboxes,
+     color pickers). Set the whole subtree's preferred scheme so the
+     browser renders their native chrome in light mode. */
+  color-scheme: light;
+}
+
+/* Force legible text color throughout the controls regardless of which
+   child element is doing the rendering. */
+.print-view-controls,
+.print-view-controls * {
+  color: #f5f2ea;
+}
+
+.print-view-controls strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.print-view-controls .print-summary,
+.print-view-controls .print-tip {
+  color: #d8d4c8;
+}
+
+.print-view-controls .print-include-label {
+  color: #ffffff;
+}
+
+.print-view-controls select,
+.print-view-controls input {
+  color: #14161c;
+  background-color: #ebe7df;
+  border: 1px solid #4a5062;
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.85rem;
+  /* Tell the browser to render the native chrome (dropdown list,
+     scrollbars, etc.) in light mode. Without this, dark-mode operating
+     systems override our colors and produce white-on-parchment text. */
+  color-scheme: light;
+}
+
+/* Explicitly style the dropdown options — otherwise some browsers
+   render them with OS defaults that clash with our parchment. */
+.print-view-controls select option,
+.print-view-controls select optgroup {
+  color: #14161c;
+  background-color: #ebe7df;
+}
+
+.print-view-controls select option:checked,
+.print-view-controls select option:hover {
+  background-color: #d8d4c8;
+  color: #14161c;
+}
+
+.print-view-controls input[type="checkbox"] {
+  padding: 0;
+  background: transparent;
+  border: none;
+  accent-color: var(--site-accent);
+  color-scheme: light;
+}
+
+.print-view-controls input[type="color"] {
+  padding: 0;
+  border: 1px solid #6a7080;
+  width: 2rem;
+  height: 1.6rem;
+  color-scheme: light;
+}
+
+/* Print chips: legible in both on/off states on the darker controls bg. */
+.print-view-controls .print-chip {
+  background: #2c2f38;
+  color: #f5f2ea;
+  border: 1px solid #5a6070;
+}
+
+.print-view-controls .print-chip:hover {
+  background: #3e4350;
+  border-color: #8a8f9c;
+}
+
+.print-view-controls .print-chip-on {
+  background: var(--site-accent);
+  color: #14161c;
+  border-color: var(--site-accent);
+}
+
+.print-view-controls .print-chip-on * {
+  color: #14161c;
+}
+
+.print-view-controls .print-chip-disabled {
+  opacity: 0.5;
 }
 
 .print-view-controls label {
@@ -882,15 +1033,15 @@ table.guide-table tr.section-row td {
    scale them down with a CSS transform so they fit in the preview pane.
    This guarantees the sample always matches production output. */
 .sample-mini-wrap {
-  width: 1.45in;
-  height: 2in;
+  width: 1.95in;
+  height: 2.72in;
   position: relative;
   overflow: hidden;
   flex: 0 0 auto;
 }
 
 .sample-mini-wrap > .print-card {
-  transform: scale(0.55);
+  transform: scale(0.75);
   transform-origin: top left;
   box-shadow: 0 4px 14px rgba(0,0,0,0.35);
 }
@@ -974,7 +1125,7 @@ table.guide-table tr.section-row td {
    ============================================================ */
 
 .deck-grid {
-  margin: 1.5rem 0 2rem;
+  margin: 0.75rem 0 1rem;
   background: var(--site-surface);
   border: 1px solid var(--site-border);
   border-radius: 8px;
@@ -1001,44 +1152,258 @@ table.guide-table tr.section-row td {
   border-bottom-color: var(--mtg-blue);
 }
 
-/* Header add-matchup cell */
-.add-matchup-th {
-  width: 10rem;
+/* ============================================================
+   Matchup tabs: horizontal row of buttons above the focus view.
+   ============================================================ */
+/* ============================================================
+   Matchup tabs: styled like file-folder tabs sitting on top of
+   the plan panel below. The active tab visually joins the panel.
+   ============================================================ */
+
+.matchup-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0;
+  padding: 0 0.6rem;
+  /* Bottom border acts as the baseline all tabs sit on. The active tab
+     breaks through this by shifting down 1px. */
+  border-bottom: 1px solid var(--site-border);
+  margin-top: 0.6rem;
+}
+
+.matchup-tabs-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--site-text-muted);
+  padding: 0 0.75rem 0.4rem 0.1rem;
+  align-self: flex-end;
+}
+
+.matchup-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  background: var(--site-surface-alt);
+  border: 1px solid var(--site-border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: var(--site-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  bottom: -1px;         /* sit on the baseline, in front of the border */
+  margin-right: 0.2rem;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.matchup-tab:hover {
+  background: var(--site-surface-hi);
+  color: var(--site-text);
+}
+
+.matchup-tab.is-active {
+  background: var(--site-surface);
+  color: var(--site-text);
+  font-weight: 700;
+  border-color: var(--site-border);
+  border-top: 2px solid var(--site-accent);
+  padding-top: calc(0.4rem - 1px);   /* compensate for the thicker top border */
+  /* Extend down by 1 extra px to break through the strip's baseline and
+     merge with the panel below. */
+  padding-bottom: calc(0.4rem + 1px);
+  z-index: 1;
+}
+
+.matchup-tab-name {
   white-space: nowrap;
+}
+
+.matchup-tab-remove {
+  display: inline-block;
+  opacity: 0.5;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+  margin-left: 0.1rem;
+  border-radius: 3px;
+}
+
+.matchup-tab-remove:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.matchup-tab.is-active .matchup-tab-remove:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* The add-matchup control is an action, not a tab. Style it as a
+   compact dashed chip pushed to the right of the strip. */
+.matchup-tab-add {
+  background: transparent;
+  border: 1px dashed var(--site-border);
+  border-radius: 6px 6px 0 0;
+  color: var(--site-text-muted);
+  font-weight: 500;
+  margin-left: auto;
+  margin-right: 0.1rem;
+}
+
+.matchup-tab-add:hover {
+  border-color: var(--site-accent);
+  color: var(--site-text);
+  background: var(--site-surface-hi);
+}
+
+.matchup-tab-rename {
+  font: inherit;
+  color: #14161c;
+  background: #ebe7df;
+  border: 1px solid #14161c;
+  border-radius: 3px;
+  padding: 0.05rem 0.35rem;
+  min-width: 8rem;
+}
+
+/* Focus panel below the tabs */
+.matchup-focus {
+  min-width: 0;
+}
+
+.matchup-focus {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 0.75rem 1rem 1rem;
+}
+
+/* When the tabs row is present, the focus panel is attached below it. */
+.matchup-focus-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.matchup-focus-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--site-text-muted);
+}
+
+.matchup-focus-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--site-text);
+}
+
+.matchup-focus-balance {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-text-muted);
+}
+
+.matchup-focus-balance.net-ok { color: #7ac886; }
+.matchup-focus-balance.net-bad { color: #f4828c; font-weight: 700; }
+
+.matchup-focus-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--site-text-muted);
+  font-style: italic;
+}
+
+/* Hint text used in the header when no matchup is selected. */
+.matchup-focus-balance.matchup-focus-hint {
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Cells that have no matchup to write into: dimmed, non-interactive. */
+.toggle-cell-idle {
+  color: var(--site-text-muted);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.toggle-cell-idle:hover {
+  background: transparent;
+}
+
+.toggle-cell-placeholder {
+  opacity: 0.4;
+}
+
+/* Header add-matchup cell: narrow by default so it reads as a slim
+   "+" affordance rather than competing with real matchup columns. */
+.add-matchup-th {
+  width: 2.25rem;
+  white-space: nowrap;
+  padding: 0.3rem 0.2rem;
+  text-align: center;
+}
+
+/* When the input is open, let the cell expand so typing is comfortable. */
+.add-matchup-th.add-matchup-th-wide {
+  width: 10rem;
+  padding: 0.3rem 0.5rem;
+  text-align: left;
 }
 
 .add-matchup-btn {
   background: none;
-  border: 1px dashed #888;
+  border: 1px dashed var(--site-border);
   border-radius: 4px;
-  color: #333;
-  font-size: 0.8rem;
-  padding: 0.2rem 0.5rem;
+  color: var(--site-text-muted);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.15rem 0.4rem 0.25rem;
   cursor: pointer;
   width: 100%;
+  min-width: 1.6rem;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
 .add-matchup-btn:hover {
-  background: #eef2f7;
-  border-color: #555;
+  background: var(--site-surface-hi);
+  border-color: var(--site-accent);
+  color: var(--site-text);
 }
 
 .add-matchup-filler {
-  background: #fafafa;
-  border: 1px solid #eee;
+  background: transparent;
+  border-left: 1px solid var(--site-border-soft);
+  border-right: 1px solid var(--site-border-soft);
 }
 
 /* Sideboard divider row: darker than the type section headers so it reads
    as a hard boundary between main and side. */
-.sideboard-divider td {
-  background: #1a1a2e;
-  color: #f7f7f2;
+/* Higher specificity than `tr.section-row td` so the divider colors
+   actually win the cascade. */
+table.guide-table tr.section-row.sideboard-divider td {
+  /* Visually distinct "Sideboard" band: darker than the surrounding rows
+     so the boundary between maindeck and sideboard reads at a glance. */
+  background: #14161e;
+  color: var(--site-accent);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  border-top: 2px solid #c9a94a;
-  border-bottom: 2px solid #c9a94a;
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  border-top: 1px solid var(--site-accent);
+  border-bottom: 1px solid var(--site-accent);
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 /* Net row */
@@ -1091,7 +1456,7 @@ table.guide-table tr.section-row td {
 .print-view-controls-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
   margin-bottom: 0.5rem;
 }
@@ -1112,15 +1477,16 @@ table.guide-table tr.section-row td {
 .print-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  color: #444;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid #bbb;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--site-text);
+  padding: 0.22rem 0.55rem;
+  border: 1px solid var(--site-border);
   border-radius: 999px;
-  background: #f6f6f6;
+  background: var(--site-surface);
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
@@ -1161,9 +1527,10 @@ table.guide-table tr.section-row td {
 }
 
 .print-tip {
-  color: #777;
-  font-size: 0.78rem;
-  margin-left: auto;
+  color: var(--site-text-muted);
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+  flex: 1 1 100%;
 }
 
 /* Inventory (checklist) card: two-column list. */
@@ -1260,10 +1627,31 @@ table.guide-table tr.section-row td {
   align-items: stretch;
 }
 
+/* Texture overlay: absolutely positioned, sits between the gradient
+   background and the content. Blend mode keeps the underlying color
+   visible. */
+.ptc-texture {
+  position: absolute;
+  inset: 0;
+  background-size: auto;
+  /* overlay reads more strongly than soft-light — the previous mode was
+     too subtle to notice against dark deck colors. */
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Frame-mode textures (e.g. Leaves Frame) draw a full-card SVG. They get
+   a slightly higher z-index than tiled textures so they sit above the
+   pattern layer and below the content. */
+.ptc-texture-frame {
+  z-index: 2;
+}
+
 .ptc-top {
   display: flex;
   justify-content: center;
-  z-index: 2;
+  z-index: 3;
 }
 
 .ptc-pips {
@@ -1367,8 +1755,67 @@ table.guide-table tr.section-row td {
 
 /* Title card controls inside the print toolbar */
 .title-card-controls {
+  /* Wrapping flex row that includes both the collapsed button and the
+     expanded panel; the panel takes a full-width row via flex-basis. */
   padding-top: 0.4rem;
-  border-top: 1px dashed #ddd;
+  border-top: 1px dashed #4a5062;
+  flex-wrap: wrap;
+}
+
+/* Collapsed controls (Option B): a single button + summary hint. */
+.title-options-btn {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.75rem !important;
+  margin: 0 !important;
+}
+
+.title-options-hint {
+  color: #d8d4c8;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Options panel: expands in place inside the controls box rather than
+   floating over the cards. Full width of the controls container, laid
+   out as a horizontal toolbar so it doesn't add too much height. */
+.title-options-panel {
+  flex: 1 1 100%;
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: #1e222a;
+  border: 1px solid #4a5062;
+  border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  color-scheme: light;
+}
+
+.title-options-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.title-options-row select {
+  min-width: 8rem;
+}
+
+.title-options-label {
+  color: #f5f2ea;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-right: 0.15rem;
+}
+
+.title-options-row input[type="color"] {
+  width: 2rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid #6a7080;
+  border-radius: 4px;
 }
 
 .title-control {
@@ -1426,10 +1873,19 @@ table.guide-table tr.section-row td {
 
 .app-two-col {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
-  gap: 1.5rem;
+  /* Empty state: workspace 1/3, preview pane 2/3. The narrow input
+     panel keeps the decklist textarea compact and lets the sample
+     cards be the visual focus. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 1.25rem;
   align-items: start;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
+}
+
+/* Loaded state: workspace 2/3, preview pane 1/3. When the user is
+   actually working in the grid, the grid is what needs room. */
+.app-two-col.app-two-col-loaded {
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
 }
 
 @media (max-width: 1000px) {
@@ -1502,6 +1958,8 @@ table.guide-table tr.section-row td {
   padding: 0;
 }
 
+
+
 /* Give the print cards a soft drop shadow so they read as physical cards
    floating on the page rather than borders. */
 .preview-pane .print-card {
@@ -1536,3 +1994,29 @@ table.guide-table tr.section-row td {
 /* Status messages on the dark surface. */
 .toolbar-msg.ok { color: #7ac886; }
 .toolbar-msg.error { color: #f4828c; }
+
+/* ============================================================
+   Print / PDF icon buttons in the print controls.
+   ============================================================ */
+
+.print-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.print-icon-btn svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.print-icon-label {
+  font-size: 0.85rem;
+}
+
+.print-export-err {
+  font-size: 0.8rem;
+  color: #f4828c;
+  margin-left: 0.5rem;
+}

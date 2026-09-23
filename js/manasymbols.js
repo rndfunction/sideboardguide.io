@@ -65,39 +65,3 @@ export function symbolSources(letter) {
   };
 }
 
-/**
- * Build an <img> element for a mana symbol. The onerror handler swaps
- * to the inline data URI if the CDN fails (e.g. CSP block in the FORGE
- * preview sandbox).
- */
-export function createManaImg(letter, sizePx) {
-  const { primary, fallback } = symbolSources(letter);
-  const img = document.createElement("img");
-  img.alt = String(letter || "").toUpperCase() + " mana";
-  img.className = "mana-symbol-img";
-  img.width = sizePx || 14;
-  img.height = sizePx || 14;
-  if (primary) img.src = primary;
-  else if (fallback) img.src = fallback;
-  img.onerror = () => {
-    if (fallback && img.src !== fallback) {
-      img.src = fallback;
-    }
-  };
-  return img;
-}
-
-/**
- * Given a mana cost string like "{1}{U}{B}", return an array of
- * image descriptors: [{ letter, alt }].
- */
-export function parseManaCost(manaCost) {
-  if (!manaCost) return [];
-  const out = [];
-  const re = /\{([^}]+)\}/g;
-  let m;
-  while ((m = re.exec(manaCost)) !== null) {
-    out.push({ letter: m[1], alt: m[1] });
-  }
-  return out;
-}

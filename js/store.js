@@ -1,4 +1,4 @@
-// Reactive store for the deck guide builder.
+// Reactive store for the sideboard guide builder.
 // Wires parser + Scryfall lookups into a shape the components consume.
 //
 // NOTE: FORGE's preview sandbox resolves bare-URL ESM imports relative to the
@@ -178,8 +178,9 @@ export function setDeckName(name) {
 
 /**
  * Clear the "user edited" flag so the next parse re-derives the name.
+ * Internal helper; not currently called from outside this module.
  */
-export function resetDeckName() {
+function resetDeckName() {
   store.deckNameWasEdited = false;
 }
 
@@ -209,8 +210,9 @@ export function copiesFor(cardName) {
 
 /**
  * Read the current plan entry for a cell, normalized to { dir, count } | null.
+ * Internal helper used by cycleCard; not part of the module's public API.
  */
-export function getCardPlan(cardName, matchupName) {
+function getCardPlan(cardName, matchupName) {
   const entry = store.plan[cardName] && store.plan[cardName][matchupName];
   if (!entry) return null;
   if (typeof entry === "string") {
@@ -223,9 +225,9 @@ export function getCardPlan(cardName, matchupName) {
 
 /**
  * Determine whether a card is in the maindeck (true) or sideboard (false).
- * Falls back to maindeck if unknown.
+ * Falls back to maindeck if unknown. Internal helper.
  */
-export function isMaindeckCard(cardName) {
+function isMaindeckCard(cardName) {
   if (!store.enriched) return true;
   for (const e of store.enriched.mainboard) {
     if (e.name === cardName) return true;
@@ -286,10 +288,3 @@ export function setCardPlan(cardName, matchupName, dir, count) {
   store.plan[cardName][matchupName] = { dir: correctDir, count: c };
 }
 
-/**
- * Backwards-compatible alias for older callers.
- * @deprecated Use cycleCard instead.
- */
-export function toggleCard(cardName, matchupName) {
-  cycleCard(cardName, matchupName);
-}
