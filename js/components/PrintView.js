@@ -1,4 +1,4 @@
-// PrintView: orchestrates the 3in x 4in printable cards.
+// PrintView: orchestrates the printable sleeve-sized cards.
 //
 // Prints, in order:
 //   1. Optional title card (decorative cover, user-customized).
@@ -20,7 +20,7 @@ import {
   savePrefs
 } from "../titlecard.js";
 
-const MATCHUPS_PER_CARD = 4;
+const MATCHUPS_PER_CARD = 3;
 const COMBINED_ROW_CAP = 50;
 
 const PrintView = {
@@ -287,7 +287,7 @@ const PrintView = {
             <span class="print-chip-count" v-else>(empty)</span>
           </label>
           <span class="print-tip">
-            Tip: in the print dialog choose "Actual size" (not "Fit to page") so 3&times;4in is preserved.
+            Tip: in the print dialog choose "Actual size" (not "Fit to page") so the sleeve-sized dimensions are preserved.
           </span>
         </div>
 

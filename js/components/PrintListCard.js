@@ -1,4 +1,4 @@
-// PrintListCard: a 3in x 4in printable inventory card.
+// PrintListCard: a sleeve-sized printable inventory card.
 // Renders one or more sections stacked (e.g. Maindeck + Sideboard combined).
 // Each section is a two-column list of "N Card Name" rows, balanced by row count.
 // Black on white, no images.
@@ -45,7 +45,7 @@ const PrintListCard = {
   methods: {
     shortName(name) {
       // Hard-cut long names rather than adding an ellipsis. Every character
-      // on a 3in card is precious, and readers don't need the "..." to
+      // on a small card is precious, and readers don't need the "..." to
       // recognize a truncated card name.
       if (!name) return "";
       if (name.length <= 28) return name;

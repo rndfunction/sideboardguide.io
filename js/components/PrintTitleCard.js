@@ -1,4 +1,4 @@
-// PrintTitleCard: a 3in x 4in decorative cover card for the deck.
+// PrintTitleCard: a sleeve-sized decorative cover card for the deck.
 // Portrait orientation. Pretty, not functional — meant to be the "cover"
 // on the back of the checklist card.
 //

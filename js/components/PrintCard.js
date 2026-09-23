@@ -1,5 +1,5 @@
-// PrintCard: renders a single 3in x 4in sideboard guide card.
-// Black on white. No images. Sized to fit 3x4in at print scale.
+// PrintCard: renders a single sleeve-sized sideboard guide card.
+// Black on white. No images. Sized to fit a standard sleeve at print scale.
 
 const PrintCard = {
   props: {
@@ -37,7 +37,7 @@ const PrintCard = {
     },
     shortName(name) {
       // Hard-cut long names rather than adding an ellipsis. Every character
-      // on a 3in card is precious, and readers don't need the "..." to
+      // on a small card is precious, and readers don't need the "..." to
       // recognize a truncated card name.
       if (!name) return "";
       if (name.length <= 26) return name;
@@ -71,7 +71,7 @@ const PrintCard = {
             </tr>
             <tr :class="{ 'pc-row-side': row.isSide }">
               <td class="pc-col-card">
-                <span class="pc-count">{{ row.count }}</span>{{ shortName(row.name) }}
+                {{ shortName(row.name) }}
               </td>
               <td
                 v-for="m in matchups"

@@ -1,16 +1,25 @@
-// SampleCards: static mock previews of the three card types the app produces.
-// Shown in the preview pane on the initial (empty) view so new users see
-// what they're building toward. Uses a hardcoded Burn-style sample.
+// SampleCards: shows the three real printable cards with a hardcoded
+// Burn-style sample. Uses the actual PrintTitleCard / PrintListCard /
+// PrintCard components so it can never drift from production output.
+//
+// Each card is wrapped in .sample-mini-wrap and scaled with a CSS
+// transform so it fits inside the preview pane at a smaller size.
+
+import PrintTitleCard from "./PrintTitleCard.js";
+import PrintListCard from "./PrintListCard.js";
+import PrintCard from "./PrintCard.js";
 
 const SampleCards = {
+  components: { PrintTitleCard, PrintListCard, PrintCard },
   data() {
     return {
-      sampleTitle: {
-        name: "Mono-Red Burn",
-        subtitle: "Mono-Red Aggro",
-        pips: ["R"]
-      },
-      sampleMainboard: [
+      deckName: "Mono-Red Burn",
+      format: "Modern",
+      colors: ["R"],
+      fontKey: "cinzel",
+      titleColor: "#8a2a1a",
+
+      mainboard: [
         { count: 4, name: "Monastery Swiftspear" },
         { count: 4, name: "Soul-Scar Mage" },
         { count: 4, name: "Lightning Bolt" },
@@ -26,133 +35,119 @@ const SampleCards = {
         { count: 3, name: "Fiery Islet" },
         { count: 8, name: "Snow-Covered Mountain" }
       ],
-      sampleSideboard: [
+      sideboard: [
         { count: 4, name: "Roiling Vortex" },
         { count: 3, name: "Skullcrack" },
         { count: 3, name: "Blood Moon" },
         { count: 3, name: "Anger of the Gods" },
         { count: 2, name: "Deflecting Palm" }
       ],
-      sampleMatchups: ["Murktide", "Jund", "Amulet Titan", "Rhinos"],
-      samplePlan: {
-        "Murktide": [
-          { count: 3, name: "Searing Blaze", dir: "out", amount: 3 },
-          { count: 3, name: "Roiling Vortex", dir: "in", amount: 3 }
-        ],
-        "Jund": [
-          { count: 2, name: "Lava Spike", dir: "out", amount: 2 },
-          { count: 2, name: "Skullcrack", dir: "in", amount: 2 }
-        ],
-        "Amulet Titan": [
-          { count: 4, name: "Monastery Swiftspear", dir: "out", amount: 4 },
-          { count: 3, name: "Blood Moon", dir: "in", amount: 3 }
-        ],
-        "Rhinos": [
-          { count: 3, name: "Eidolon of the Great Revel", dir: "out", amount: 3 },
-          { count: 3, name: "Anger of the Gods", dir: "in", amount: 3 }
-        ]
+      // 3 matchups to match the current MATCHUPS_PER_CARD setting.
+      matchups: ["Murktide", "Amulet Titan", "Rhinos"],
+      // Simplified plan, per matchup, per card: dir + count.
+      plan: {
+        "Murktide": {
+          "Searing Blaze": { dir: "out", count: 3 },
+          "Roiling Vortex": { dir: "in", count: 3 },
+          "Skewer the Critics": { dir: "out", count: 2 },
+          "Blood Moon": { dir: "in", count: 2 }
+        },
+        "Amulet Titan": {
+          "Monastery Swiftspear": { dir: "out", count: 4 },
+          "Blood Moon": { dir: "in", count: 3 },
+          "Searing Blaze": { dir: "out", count: 2 },
+          "Deflecting Palm": { dir: "in", count: 2 }
+        },
+        "Rhinos": {
+          "Eidolon of the Great Revel": { dir: "out", count: 3 },
+          "Anger of the Gods": { dir: "in", count: 3 },
+          "Searing Blaze": { dir: "out", count: 1 },
+          "Skullcrack": { dir: "in", count: 1 }
+        }
       }
     };
   },
   computed: {
-    sampleMainRows() {
-      // Two-column balance for the checklist sample.
-      return this.sampleMainboard;
+    listSections() {
+      return [
+        { title: "Maindeck", total: this.mainboard.reduce((a, r) => a + r.count, 0), rows: this.mainboard },
+        { title: "Sideboard", total: this.sideboard.reduce((a, r) => a + r.count, 0), rows: this.sideboard }
+      ];
     },
-    sampleSideRows() {
-      return this.sampleSideboard;
+    /**
+     * Build the row set PrintCard expects: main then side, with planByMatchup
+     * keyed by matchup. Only include rows that have at least one plan so the
+     * sample shows realistic filtering.
+     */
+    guideRows() {
+      const build = (list, isSide) => {
+        const byName = new Map();
+        for (const e of list) {
+          if (!byName.has(e.name)) byName.set(e.name, { name: e.name, count: 0, isSide });
+          byName.get(e.name).count += e.count;
+        }
+        return Array.from(byName.values());
+      };
+
+      const mainRows = build(this.mainboard, false);
+      const sideRows = build(this.sideboard, true);
+
+      const attach = (rows) => rows.map((r) => {
+        const planByMatchup = {};
+        let hasAnyPlan = false;
+        for (const mu of this.matchups) {
+          const entry = (this.plan[mu] && this.plan[mu][r.name]) || null;
+          planByMatchup[mu] = entry;
+          if (entry) hasAnyPlan = true;
+        }
+        return { ...r, planByMatchup, hasAnyPlan };
+      });
+
+      const mainWith = attach(mainRows);
+      const sideWith = attach(sideRows);
+
+      const plannedMain = mainWith.filter((r) => r.hasAnyPlan);
+      const plannedSide = sideWith.filter((r) => r.hasAnyPlan);
+
+      const combined = [...plannedMain, ...plannedSide];
+      for (const r of combined) r.firstSide = false;
+      const firstSide = combined.find((r) => r.isSide);
+      if (firstSide) firstSide.firstSide = true;
+      return combined;
     }
   },
   template: `
     <div class="sample-cards" aria-hidden="true">
-      <p class="sample-cards-caption">You'll get three printable 3x4 cards:</p>
+      <p class="sample-cards-caption">You'll get three printable sleeve-sized cards:</p>
 
       <div class="sample-cards-row">
-        <!-- Title card (no date) -->
-        <div class="print-card print-title-card sample-mini" :style="{ background: 'radial-gradient(circle at 50% 40%, #8a2a1a 0%, #5a1a10 100%)' }">
-          <div class="ptc-top">
-            <span class="ptc-pips">
-              <span class="ptc-pip ptc-pip-R">R</span>
-            </span>
-          </div>
-          <div class="ptc-watermark" style="color: rgba(247,247,242,0.18);">R</div>
-          <div class="ptc-center">
-            <div class="ptc-name" style="color: #f7f7f2; font-family: 'Cinzel', serif; font-size: 14pt;">{{ sampleTitle.name }}</div>
-            <div class="ptc-subtitle" style="color: rgba(247,247,242,0.7); font-size: 7pt;">{{ sampleTitle.subtitle }}</div>
-          </div>
+        <div class="sample-mini-wrap">
+          <print-title-card
+            :deck-name="deckName"
+            subtitle="Mono-Red Aggro"
+            :colors="colors"
+            :font-key="fontKey"
+            :bg-color="titleColor"
+          ></print-title-card>
         </div>
 
-        <!-- Checklist card: maindeck + sideboard in one, like the real one -->
-        <div class="print-card print-list-card sample-mini">
-          <header class="pc-header">
-            <div class="pc-title" style="font-size: 10pt;">{{ sampleTitle.name }}</div>
-            <div class="pc-sub">
-              <span class="pc-format" style="font-size: 6pt;">Maindeck + Sideboard &middot; 75</span>
-            </div>
-          </header>
-          <div class="pl-body">
-            <div class="pl-columns">
-              <ul class="pl-col" style="font-size: 5pt;">
-                <li v-for="(row, i) in sampleMainRows.slice(0, 8)" :key="'sl-' + i" class="pl-row">
-                  <span class="pl-count">{{ row.count }}</span>
-                  <span class="pl-name">{{ row.name }}</span>
-                </li>
-              </ul>
-              <ul class="pl-col" style="font-size: 5pt;">
-                <li v-for="(row, i) in sampleMainRows.slice(8)" :key="'sr-' + i" class="pl-row">
-                  <span class="pl-count">{{ row.count }}</span>
-                  <span class="pl-name">{{ row.name }}</span>
-                </li>
-              </ul>
-            </div>
-            <div class="pl-section-divider">
-              <span class="pl-section-divider-label">Sideboard &middot; 15</span>
-            </div>
-            <div class="pl-columns">
-              <ul class="pl-col" style="font-size: 5pt;">
-                <li v-for="(row, i) in sampleSideRows.slice(0, 3)" :key="'ssl-' + i" class="pl-row">
-                  <span class="pl-count">{{ row.count }}</span>
-                  <span class="pl-name">{{ row.name }}</span>
-                </li>
-              </ul>
-              <ul class="pl-col" style="font-size: 5pt;">
-                <li v-for="(row, i) in sampleSideRows.slice(3)" :key="'ssr-' + i" class="pl-row">
-                  <span class="pl-count">{{ row.count }}</span>
-                  <span class="pl-name">{{ row.name }}</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+        <div class="sample-mini-wrap">
+          <print-list-card
+            :deck-name="deckName"
+            :format="format"
+            :colors="colors"
+            :sections="listSections"
+          ></print-list-card>
         </div>
 
-        <!-- Matchup card -->
-        <div class="print-card sample-mini">
-          <header class="pc-header">
-            <div class="pc-title" style="font-size: 10pt;">{{ sampleTitle.name }}</div>
-            <div class="pc-sub">
-              <span class="pc-format" style="font-size: 6pt;">Sideboard guide</span>
-            </div>
-          </header>
-          <table class="pc-table" style="font-size: 5.5pt;">
-            <thead>
-              <tr>
-                <th class="pc-col-card">Card</th>
-                <th v-for="m in sampleMatchups" :key="m" class="pc-col-mu">{{ m }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="(mu, mi) in sampleMatchups" :key="'mu-' + mi">
-                <tr v-for="(row, ri) in samplePlan[mu]" :key="'mr-' + mi + '-' + ri" :class="{ 'pc-row-side': row.dir === 'in' }">
-                  <td class="pc-col-card">
-                    <span class="pc-count">{{ row.count }}</span>{{ row.name }}
-                  </td>
-                  <td v-for="m2 in sampleMatchups" :key="'c-' + mi + '-' + ri + '-' + m2" class="pc-cell" :class="row.dir === 'in' ? 'pc-in' : 'pc-out'">
-                    <template v-if="m2 === mu">{{ row.dir === 'in' ? '+' + row.amount : '-' + row.amount }}</template>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+        <div class="sample-mini-wrap">
+          <print-card
+            :deck-name="deckName"
+            :format="format"
+            :colors="colors"
+            :rows="guideRows"
+            :matchups="matchups"
+          ></print-card>
         </div>
       </div>
     </div>

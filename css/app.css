@@ -737,7 +737,7 @@ table.guide-table tr.section-row td {
 }
 
 /* ============================================================
-   Print cards (3in x 4in) + print-only root
+   Print cards (sized to fit a standard MTG sleeve) + print-only root
    ============================================================ */
 
 .print-view {
@@ -772,14 +772,14 @@ table.guide-table tr.section-row td {
   justify-content: center;
 }
 
-/* A physical 3in x 4in card. Screen preview shows at actual size. */
+/* A physical card, sized to fit a standard MTG sleeve (66.5mm x 92.5mm). */
 .print-card {
-  width: 3in;
-  height: 4in;
+  width: 2.62in;
+  height: 3.64in;
   background: #fff;
   color: #000;
   border: 1px solid #333;
-  padding: 0.12in 0.14in;
+  padding: 0.1in 0.12in;
   box-sizing: border-box;
   font-family: "Helvetica Neue", Arial, sans-serif;
   display: flex;
@@ -845,16 +845,21 @@ table.guide-table tr.section-row td {
 
 .pc-col-card {
   text-align: left;
-  width: 1.35in;
+  /* No count prefix on the guide card, so this column can be even
+     narrower. Matchup columns share the remaining space evenly. */
+  width: 0.75in;
 }
 
 .pc-col-mu {
   text-align: center;
   width: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Wrap long matchup names rather than ellipsizing them. */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
   word-break: break-word;
+  line-height: 1.05;
+  padding: 0.02in 0.02in;
 }
 
 .pc-count {
@@ -873,9 +878,21 @@ table.guide-table tr.section-row td {
   line-height: 1.05;
 }
 
-/* Sample mockup uses a much smaller base so it stays proportionate. */
-.sample-mini .pc-cell {
-  font-size: 7.5pt;
+/* Sample wrappers: render real print cards at their true size, then
+   scale them down with a CSS transform so they fit in the preview pane.
+   This guarantees the sample always matches production output. */
+.sample-mini-wrap {
+  width: 1.45in;
+  height: 2in;
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.sample-mini-wrap > .print-card {
+  transform: scale(0.55);
+  transform-origin: top left;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
 }
 
 .pc-in {
@@ -937,7 +954,7 @@ table.guide-table tr.section-row td {
 
   .print-cards-grid {
     display: grid;
-    grid-template-columns: 3in 3in;
+    grid-template-columns: 2.62in 2.62in;
     gap: 0.25in;
     padding: 0;
     background: none;
@@ -1186,6 +1203,7 @@ table.guide-table tr.section-row td {
   column-gap: 0.1in;
   flex: 0 1 auto;
   overflow: hidden;
+  min-width: 0;
 }
 
 .pl-col {
@@ -1194,12 +1212,16 @@ table.guide-table tr.section-row td {
   padding: 0;
   font-size: 8.5pt;
   line-height: 1.15;
+  /* Grid children default to min-width:auto which lets content push
+     them past their column share. Setting 0 keeps columns in bounds. */
+  min-width: 0;
 }
 
 .pl-row {
   display: flex;
   gap: 0.03in;
   padding: 0.005in 0;
+  min-width: 0;
 }
 
 .pl-count {
@@ -1211,9 +1233,12 @@ table.guide-table tr.section-row td {
 .pl-name {
   flex: 1 1 auto;
   min-width: 0;
+  /* Allow wrapping instead of ellipsizing or overflowing. */
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.1;
 }
 
 .pl-empty {
@@ -1223,7 +1248,7 @@ table.guide-table tr.section-row td {
 }
 
 /* ============================================================
-   Title card (3in x 4in decorative cover).
+   Title card (decorative cover, sized to fit a standard sleeve).
    ============================================================ */
 
 .print-title-card {
@@ -1279,8 +1304,8 @@ table.guide-table tr.section-row td {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 3in;
-  height: 3in;
+  width: 2.4in;
+  height: 2.4in;
   opacity: 0.18;
   pointer-events: none;
   user-select: none;
