@@ -1,9 +1,6 @@
 // Toolbar: save/load/forget + print-preview toggle + preset matchups.
 import {
-  saveGuide,
-  loadGuide,
-  clearSaved,
-  PRESET_MATCHUPS,
+  loadPresets,
   FORMAT_LIST,
   getLastFormat,
   setLastFormat,
@@ -27,7 +24,7 @@ const GuideToolbar = {
     titleTexture: { type: String, default: null },
     titleTextureIntensity: { type: String, default: null }
   },
-  emits: ["load-state", "add-matchups", "toggle-print", "import-share", "browse-guides", "submit-guide"],
+  emits: ["add-matchups", "toggle-print", "import-share", "browse-guides", "submit-guide"],
   data() {
     return {
       lastMessage: "",
@@ -58,26 +55,7 @@ const GuideToolbar = {
       this.lastMessageClass = cls || "ok";
       setTimeout(() => { this.lastMessage = ""; }, 2500);
     },
-    onSave() {
-      const r = saveGuide({
-        rawText: this.rawText,
-        matchups: this.matchups,
-        plan: this.plan,
-        deckName: this.deckName
-      });
-      if (r.ok) this.flash("Saved locally.", "ok");
-      else this.flash("Save failed: " + (r.error || "unknown"), "error");
-    },
-    onLoad() {
-      const saved = loadGuide();
-      if (!saved) { this.flash("No saved guide found.", "error"); return; }
-      this.$emit("load-state", saved);
-      this.flash("Loaded saved guide.", "ok");
-    },
-    onClear() {
-      clearSaved();
-      this.flash("Saved guide forgotten.", "ok");
-    },
+
     onAddPreset(matchup) {
       this.$emit("add-matchups", [matchup]);
     },
@@ -134,9 +112,7 @@ const GuideToolbar = {
           <option v-for="f in presetFormats" :key="f" :value="f">Format: {{ f }}</option>
         </select>
         <div class="toolbar-actions">
-          <button type="button" class="usa-button usa-button--outline" @click="onSave">Save</button>
-          <button type="button" class="usa-button usa-button--outline" @click="onLoad">Load</button>
-          <button type="button" class="usa-button usa-button--outline" @click="onClear">Forget</button>
+
           <button type="button" class="usa-button usa-button--outline" @click="onExportShare" title="Download this guide as a .json file">Export</button>
           <button type="button" class="usa-button usa-button--outline" @click="onImportShareClick" title="Load a guide from a .json file">Import</button>
           <input
