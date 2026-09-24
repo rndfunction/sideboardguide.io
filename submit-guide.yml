@@ -1,0 +1,87 @@
+name: Submit Guide
+
+on:
+  repository_dispatch:
+    types: [submit-guide]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rate limit check
+        id: ratelimit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CUTOFF=$(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1H +%Y-%m-%dT%H:%M:%SZ)
+          COUNT=$(gh pr list --label guide-submission --state all --json createdAt --jq '[.[] | select(.createdAt >= "'"$CUTOFF"'")] | length')
+          echo "recent submissions: $COUNT"
+          if [ "$COUNT" -ge 10 ]; then
+            echo "too-many=true" >> $GITHUB_OUTPUT
+          else
+            echo "too-many=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage helper script
+        if: steps.ratelimit.outputs.too-many == 'false'
+        run: |
+          cat > /tmp/write-guide.py <<'PY'
+          import json, pathlib, datetime
+          payload = json.load(open('/tmp/payload.json'))
+          filename = payload.get('filename') or 'untitled.json'
+          filename = ''.join(c for c in filename if c.isalnum() or c in '._-')
+          if not filename.endswith('.json'):
+              filename += '.json'
+          guide = payload.get('guide') or {}
+          meta = payload.get('meta') or {}
+          (pathlib.Path('guides') / filename).write_text(json.dumps(guide, indent=2) + chr(10))
+          mpath = pathlib.Path('manifest.json')
+          manifest = json.loads(mpath.read_text()) if mpath.exists() else {'version': 1, 'guides': []}
+          entry = {
+              'file': filename,
+              'deckName': meta.get('deckName') or guide.get('deck', {}).get('name') or 'Untitled Deck',
+              'format': meta.get('format') or guide.get('deck', {}).get('format') or '',
+              'archetype': meta.get('archetype') or guide.get('deck', {}).get('archetype') or '',
+              'author': meta.get('author') or 'anonymous',
+              'createdAt': datetime.date.today().isoformat()
+          }
+          manifest.setdefault('guides', []).append(entry)
+          manifest['lastUpdated'] = entry['createdAt']
+          mpath.write_text(json.dumps(manifest, indent=2) + chr(10))
+          open('/tmp/filename.txt', 'w').write(filename)
+          PY
+
+      - name: Write guide file
+        if: steps.ratelimit.outputs.too-many == 'false'
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: |
+          mkdir -p guides
+          printf '%s' "$PAYLOAD" > /tmp/payload.json
+          python3 /tmp/write-guide.py
+
+      - name: Open PR
+        if: steps.ratelimit.outputs.too-many == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILENAME=$(cat /tmp/filename.txt)
+          BRANCH="guide-submission/$(date +%s)-${FILENAME%.json}"
+          git config user.name "guide-bot"
+          git config user.email "guide-bot@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add "guides/$FILENAME" manifest.json
+          git commit -m "Add guide: $FILENAME"
+          git push -u origin "$BRANCH"
+          REPO="${{ github.repository }}"
+          RAW_URL="https://raw.githubusercontent.com/$REPO/$BRANCH/guides/$FILENAME"
+          ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$RAW_URL")
+          PREVIEW_URL="https://rndfunction.github.io/sideboardguide.io/?preview=$ENCODED"
+          BODY="New guide submission. File: guides/$FILENAME Preview: $PREVIEW_URL"
+          gh pr create --title "Guide submission: $FILENAME" --body "$BODY" --label guide-submission --head "$BRANCH" --base main

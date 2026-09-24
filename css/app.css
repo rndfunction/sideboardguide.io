@@ -2102,6 +2102,354 @@ th.card-col:hover .card-preview-icon,
 }
 
 /* ============================================================
+   Site header mode nav (Build / Browse)
+   ============================================================ */
+
+.site-header-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.site-mode-nav {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  background: var(--site-surface);
+  overflow: hidden;
+}
+
+.site-mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--site-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.site-mode-btn:hover {
+  color: var(--site-text);
+  background: var(--site-surface-alt);
+}
+
+.site-mode-btn.is-active {
+  background: var(--site-accent);
+  color: #14161c;
+}
+
+/* ============================================================
+   Guide library (browse mode)
+   ============================================================ */
+
+.guide-library {
+  margin: 1rem 0 3rem;
+}
+
+.guide-library-header h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.6rem;
+  color: var(--site-text);
+}
+
+.guide-library-lead {
+  margin: 0 0 1rem;
+  color: var(--site-text-muted);
+}
+
+.guide-library-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.guide-library-filter select,
+.guide-library-search input {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--site-surface);
+  color: var(--site-text);
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+}
+
+.guide-library-search input {
+  min-width: 16rem;
+}
+
+.guide-library-source {
+  font-size: 0.75rem;
+  color: var(--site-text-muted);
+  margin-left: auto;
+}
+
+.guide-library-status {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--site-text-muted);
+}
+
+.guide-library-error { color: #f4828c; }
+
+.guide-library-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 1rem;
+}
+
+.guide-library-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.guide-library-card:hover {
+  border-color: var(--site-accent);
+}
+
+.guide-library-card-body { min-width: 0; }
+
+.guide-library-card-name {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  color: var(--site-text);
+}
+
+.guide-library-card-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.guide-library-tag {
+  background: var(--site-surface-hi);
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.72rem;
+  color: var(--site-text-muted);
+}
+
+.guide-library-archetype {
+  font-size: 0.85rem;
+  color: var(--site-text-muted);
+}
+
+.guide-library-card-author {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--site-text-muted);
+  font-style: italic;
+}
+
+.guide-library-open {
+  align-self: flex-start;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.guide-library-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--site-border-soft);
+  font-size: 0.8rem;
+  color: var(--site-text-muted);
+}
+
+.guide-library-footer a {
+  color: var(--site-accent);
+}
+
+/* Guide library header row with submit action */
+.guide-library-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.guide-library-submit {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Submit status feedback bar (bottom-right toast-like) */
+.submit-status-bar {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  color: var(--site-text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  z-index: 1500;
+}
+
+.submit-status-bar.ok {
+  border-color: var(--site-accent);
+}
+
+.submit-status-bar.error {
+  border-color: #f4828c;
+  color: #f4828c;
+}
+
+/* ============================================================
+   Community guide browser (modal)
+   ============================================================ */
+
+.guide-browser-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.guide-browser-panel {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 44rem;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--site-text);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.guide-browser-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--site-border);
+}
+
+.guide-browser-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--site-text);
+}
+
+.guide-browser-close {
+  background: transparent;
+  border: none;
+  color: var(--site-text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.3rem;
+}
+
+.guide-browser-close:hover { color: var(--site-text); }
+
+.guide-browser-source {
+  margin: 0;
+  padding: 0.5rem 1rem 0;
+  font-size: 0.78rem;
+  color: var(--site-text-muted);
+}
+
+.guide-browser-status {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--site-text-muted);
+}
+
+.guide-browser-error { color: #f4828c; }
+
+.guide-browser-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+  overflow-y: auto;
+}
+
+.guide-browser-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.guide-browser-item:last-child { border-bottom: none; }
+
+.guide-browser-info { min-width: 0; }
+
+.guide-browser-name {
+  font-weight: 700;
+  color: var(--site-text);
+  font-size: 0.95rem;
+}
+
+.guide-browser-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--site-text-muted);
+  flex-wrap: wrap;
+}
+
+.guide-browser-tag {
+  background: var(--site-surface-hi);
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.guide-browser-author { font-style: italic; }
+
+.guide-browser-load {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.guide-browser-footer {
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--site-border);
+  font-size: 0.78rem;
+  color: var(--site-text-muted);
+}
+
+.guide-browser-hint a {
+  color: var(--site-accent);
+}
+
+/* ============================================================
    Print / PDF icon buttons in the print controls.
    ============================================================ */
 

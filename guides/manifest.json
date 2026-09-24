@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-09-24",
+  "guides": [
+    {
+      "file": "mono-red-burn-modern.json",
+      "deckName": "Mono-Red Burn",
+      "format": "Modern",
+      "archetype": "Mono-Red Burn",
+      "author": "rndfunction",
+      "createdAt": "2026-09-24"
+    }
+  ]
+}

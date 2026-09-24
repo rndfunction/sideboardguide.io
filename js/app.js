@@ -7,6 +7,10 @@ import GuideToolbar from "./components/GuideToolbar.js";
 import DeckGrid from "./components/DeckGrid.js";
 import PrintView from "./components/PrintView.js";
 import CardPreview from "./components/CardPreview.js";
+import GuideBrowser from "./components/GuideBrowser.js";
+import GuideLibrary from "./components/GuideLibrary.js";
+import { buildSharePayload } from "./persistence.js";
+import { submitGuide, suggestFilename } from "./guides.js";
 import {
   store,
   loadDecklist,
@@ -29,7 +33,14 @@ const app = Vue.createApp({
     return {
       store,
       showPrint: true,
-      selectedFormat: getLastFormat()
+      selectedFormat: getLastFormat(),
+      showGuideBrowser: false,
+      // Top-level app mode: "build" (default) or "browse".
+      // Reflects the URL hash so #browse deep-links to the library.
+      mode: (typeof window !== "undefined" && window.location.hash === "#browse") ? "browse" : "build",
+      // Submission feedback for the toolbar and library.
+      submitStatus: "",
+      submitStatusClass: "ok"
     };
   },
   computed: {
@@ -121,6 +132,59 @@ const app = Vue.createApp({
     },
     onClosePrint() {
       this.showPrint = false;
+    },
+    onOpenGuideBrowser() {
+      this.showGuideBrowser = true;
+    },
+    onCloseGuideBrowser() {
+      this.showGuideBrowser = false;
+    },
+    async onLoadSharedGuide(parsed) {
+      await this.onImportShare(parsed);
+      this.setMode("build");
+    },
+    flashSubmit(msg, cls) {
+      this.submitStatus = msg;
+      this.submitStatusClass = cls || "ok";
+      setTimeout(() => { this.submitStatus = ""; }, 4000);
+    },
+    async onSubmitGuide() {
+      if (!store.enriched) {
+        this.flashSubmit("Load a decklist first to submit a guide.", "error");
+        return;
+      }
+      const payload = buildSharePayload({
+        deckName: store.deckName,
+        format: this.selectedFormat,
+        archetype: store.deckName,
+        rawText: store.rawText,
+        matchups: store.matchups,
+        plan: store.plan
+      });
+      const filename = suggestFilename(store.deckName);
+      const meta = {
+        deckName: store.deckName || "Untitled Deck",
+        format: this.selectedFormat || "",
+        archetype: store.deckName || "",
+        author: ""
+      };
+      try {
+        await submitGuide(payload, filename, meta);
+        this.flashSubmit("Submitted. A maintainer will review it shortly.", "ok");
+      } catch (err) {
+        this.flashSubmit(String(err.message || err), "error");
+      }
+    },
+    setMode(next) {
+      if (next !== "build" && next !== "browse") return;
+      this.mode = next;
+      if (typeof window !== "undefined" && window.history && window.history.replaceState) {
+        const hash = next === "browse" ? "#browse" : "";
+        window.history.replaceState(null, "", window.location.pathname + window.location.search + hash);
+      }
+    },
+    onToggleMode() {
+      this.setMode(this.mode === "browse" ? "build" : "browse");
     }
   }
 });
@@ -131,4 +195,30 @@ app.component("guide-toolbar", GuideToolbar);
 app.component("deck-grid", DeckGrid);
 app.component("print-view", PrintView);
 app.component("card-preview", CardPreview);
-app.mount("#app");
+app.component("guide-browser", GuideBrowser);
+app.component("guide-library", GuideLibrary);
+
+// Handle ?preview=<url> before mounting: fetch that guide and load it.
+(async () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const previewUrl = params.get("preview");
+    if (previewUrl) {
+      const res = await fetch(previewUrl, { cache: "no-cache" });
+      if (res.ok) {
+        const text = await res.text();
+        const { parseShare } = await import("./persistence.js");
+        const parsed = parseShare(text);
+        if (parsed && !parsed.error) {
+          // Apply after mount so reactive state flows through.
+          const appInstance = app.mount("#app");
+          await appInstance.onLoadSharedGuide(parsed);
+          return;
+        }
+      }
+    }
+  } catch (_) {
+    // Fall through to normal mount.
+  }
+  app.mount("#app");
+})();

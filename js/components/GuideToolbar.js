@@ -27,7 +27,7 @@ const GuideToolbar = {
     titleTexture: { type: String, default: null },
     titleTextureIntensity: { type: String, default: null }
   },
-  emits: ["load-state", "add-matchups", "toggle-print", "import-share"],
+  emits: ["load-state", "add-matchups", "toggle-print", "import-share", "browse-guides", "submit-guide"],
   data() {
     return {
       lastMessage: "",
@@ -146,6 +146,12 @@ const GuideToolbar = {
             class="toolbar-import-input"
             @change="onImportShareChange"
           />
+          <button type="button" class="usa-button usa-button--outline" @click="$emit('browse-guides')" title="Browse community-submitted guides">
+            Browse
+          </button>
+          <button type="button" class="usa-button usa-button--outline" @click="$emit('submit-guide')" title="Submit this guide to the community repository">
+            Submit
+          </button>
           <button type="button" class="usa-button" @click="onTogglePrint">
             {{ printOpen ? "Hide print preview" : "Show print preview" }}
           </button>

@@ -1,0 +1,92 @@
+{
+  "format": "mtg-sideboard-guide",
+  "version": 1,
+  "generator": "Sideboard Guide Builder",
+  "createdAt": "2026-09-24T00:00:00.000Z",
+  "deck": {
+    "name": "Mono-Red Burn",
+    "format": "Modern",
+    "archetype": "Mono-Red Burn",
+    "rawText": "4 Monastery Swiftspear\n4 Soul-Scar Mage\n4 Lightning Bolt\n4 Lava Spike\n4 Rift Bolt\n4 Skewer the Critics\n4 Eidolon of the Great Revel\n4 Searing Blaze\n4 Mountain\n4 Arid Mesa\n4 Scalding Tarn\n4 Ramunap Ruins\n4 Fiery Islet\n8 Snow-Covered Mountain\n\n4 Roiling Vortex\n3 Skullcrack\n3 Blood Moon\n3 Anger of the Gods\n2 Deflecting Palm"
+  },
+  "matchups": [
+    "Murktide",
+    "Amulet Titan",
+    "Rhinos"
+  ],
+  "plan": {
+    "Searing Blaze": {
+      "Murktide": {
+        "dir": "out",
+        "count": 3
+      },
+      "Amulet Titan": {
+        "dir": "out",
+        "count": 2
+      },
+      "Rhinos": {
+        "dir": "out",
+        "count": 1
+      }
+    },
+    "Skewer the Critics": {
+      "Murktide": {
+        "dir": "out",
+        "count": 2
+      }
+    },
+    "Monastery Swiftspear": {
+      "Amulet Titan": {
+        "dir": "out",
+        "count": 4
+      }
+    },
+    "Eidolon of the Great Revel": {
+      "Rhinos": {
+        "dir": "out",
+        "count": 3
+      }
+    },
+    "Roiling Vortex": {
+      "Murktide": {
+        "dir": "in",
+        "count": 3
+      }
+    },
+    "Blood Moon": {
+      "Murktide": {
+        "dir": "in",
+        "count": 2
+      },
+      "Amulet Titan": {
+        "dir": "in",
+        "count": 3
+      }
+    },
+    "Deflecting Palm": {
+      "Amulet Titan": {
+        "dir": "in",
+        "count": 3
+      }
+    },
+    "Anger of the Gods": {
+      "Rhinos": {
+        "dir": "in",
+        "count": 3
+      }
+    },
+    "Skullcrack": {
+      "Rhinos": {
+        "dir": "in",
+        "count": 1
+      }
+    }
+  },
+  "titleCard": {
+    "color": "#8a2a1a",
+    "fontKey": "cinzel",
+    "symbol": "auto",
+    "texture": "none",
+    "intensity": "medium"
+  }
+}
