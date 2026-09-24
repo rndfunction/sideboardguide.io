@@ -131,7 +131,50 @@ export function storeToken(token) {
 export function clearToken() {
   try {
     sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(USER_STORAGE_KEY);
   } catch (_) {}
+}
+
+// ---------------------------------------------------------------------------
+// Authenticated user lookup (for attribution on submissions)
+// ---------------------------------------------------------------------------
+
+const USER_STORAGE_KEY = "mtg-deck-guide:gh-user";
+
+/**
+ * Fetch the authenticated user from GitHub. Caches the result in
+ * sessionStorage so we don't hit the API on every submit.
+ * Returns { login, name } or null.
+ */
+export async function fetchUser(token) {
+  if (!token) return null;
+
+  // Cached?
+  try {
+    const raw = sessionStorage.getItem(USER_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.login) return parsed;
+    }
+  } catch (_) {}
+
+  try {
+    const res = await fetch("https://api.github.com/user", {
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Authorization": "Bearer " + token
+      }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const user = { login: data.login || "", name: data.name || "" };
+    if (user.login) {
+      try { sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user)); } catch (_) {}
+    }
+    return user;
+  } catch (_) {
+    return null;
+  }
 }
 
 function sleep(ms) {

@@ -12,7 +12,7 @@ import GuideLibrary from "./components/GuideLibrary.js";
 import DeviceAuthDialog from "./components/DeviceAuthDialog.js";
 import { buildSharePayload } from "./persistence.js";
 import { submitGuide, suggestFilename } from "./guides.js";
-import { getStoredToken, storeToken, clearToken } from "./githubauth.js";
+import { getStoredToken, storeToken, clearToken, fetchUser } from "./githubauth.js";
 import {
   store,
   loadDecklist,
@@ -29,6 +29,11 @@ const Vue = window.Vue;
 if (!Vue || typeof Vue.createApp !== "function") {
   throw new Error("Vue global not found. Ensure /index.html loads vue.global.prod.js before /js/app.js.");
 }
+
+// Expose the reactive store on window for debugging. This is read-only
+// usage — nothing in the app writes to window.__store. Safe to leave in
+// production; it's just a global reference.
+window.__store = store;
 
 const app = Vue.createApp({
   data() {
@@ -167,22 +172,33 @@ const app = Vue.createApp({
         plan: store.plan
       });
       const filename = suggestFilename(store.deckName);
-      const meta = {
-        deckName: store.deckName || "Untitled Deck",
-        format: this.selectedFormat || "",
-        archetype: store.deckName || "",
-        author: ""
-      };
-
       const token = getStoredToken();
       if (!token) {
         // Need to auth first; stash the payload and open the dialog.
-        this._pendingSubmit = { payload, filename, meta };
+        // We'll build the meta (including the author handle) once we have
+        // a token and can look up the authenticated user.
+        this._pendingSubmit = { payload, filename };
         this.showAuthDialog = true;
         return;
       }
 
+      const meta = await this._buildMeta(token);
       await this._doSubmit(payload, filename, meta, token);
+    },
+    async _buildMeta(token) {
+      // Look up the authenticated user for attribution. If the call
+      // fails, fall back to "anonymous" so submissions still work.
+      let author = "anonymous";
+      try {
+        const user = await fetchUser(token);
+        if (user && user.login) author = user.login;
+      } catch (_) {}
+      return {
+        deckName: store.deckName || "Untitled Deck",
+        format: this.selectedFormat || "",
+        archetype: store.deckName || "",
+        author: author
+      };
     },
     async _doSubmit(payload, filename, meta, token) {
       try {
@@ -205,7 +221,8 @@ const app = Vue.createApp({
       const pending = this._pendingSubmit;
       this._pendingSubmit = null;
       if (pending) {
-        await this._doSubmit(pending.payload, pending.filename, pending.meta, token);
+        const meta = await this._buildMeta(token);
+        await this._doSubmit(pending.payload, pending.filename, meta, token);
       }
     },
     onAuthClose() {

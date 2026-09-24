@@ -1,10 +1,6 @@
-// SampleCards: shows the three real printable cards with a hardcoded
-// Burn-style sample. Uses the actual PrintTitleCard / PrintListCard /
-// PrintCard components so it can never drift from production output.
-//
-// The sideboard plan honors the real rule: cards IN must equal cards OUT
-// for every matchup, since you can't add more than you remove without
-// going over 60.
+// SampleCards: shows the three real printable cards with a Mono Red
+// Madness (Pauper) sample. Uses the actual PrintTitleCard / PrintListCard
+// / PrintCard components so it can never drift from production output.
 
 import PrintTitleCard from "./PrintTitleCard.js";
 import PrintListCard from "./PrintListCard.js";
@@ -14,58 +10,59 @@ const SampleCards = {
   components: { PrintTitleCard, PrintListCard, PrintCard },
   data() {
     return {
-      deckName: "Mono-Red Burn",
-      format: "Modern",
+      deckName: "Mono Red Madness",
+      format: "Pauper",
       colors: ["R"],
       fontKey: "cinzel",
       titleColor: "#8a2a1a",
 
       mainboard: [
-        { count: 4, name: "Monastery Swiftspear" },
-        { count: 4, name: "Soul-Scar Mage" },
+        { count: 3, name: "Faithless Looting" },
+        { count: 4, name: "Fiery Temper" },
+        { count: 3, name: "Fireblast" },
+        { count: 4, name: "Grab the Prize" },
+        { count: 3, name: "Guttersnipe" },
+        { count: 4, name: "Highway Robbery" },
+        { count: 4, name: "Kessig Flamebreather" },
+        { count: 4, name: "Lava Dart" },
         { count: 4, name: "Lightning Bolt" },
-        { count: 4, name: "Lava Spike" },
-        { count: 4, name: "Rift Bolt" },
-        { count: 4, name: "Skewer the Critics" },
-        { count: 4, name: "Eidolon of the Great Revel" },
-        { count: 4, name: "Searing Blaze" },
-        { count: 4, name: "Mountain" },
-        { count: 4, name: "Arid Mesa" },
-        { count: 4, name: "Scalding Tarn" },
-        { count: 4, name: "Ramunap Ruins" },
-        { count: 4, name: "Fiery Islet" },
-        { count: 8, name: "Snow-Covered Mountain" }
+        { count: 18, name: "Mountain" },
+        { count: 1, name: "Sazacap's Brew" },
+        { count: 4, name: "Sneaky Snacker" },
+        { count: 4, name: "Voldaren Epicure" }
       ],
       sideboard: [
-        { count: 4, name: "Roiling Vortex" },
-        { count: 3, name: "Skullcrack" },
-        { count: 3, name: "Blood Moon" },
-        { count: 3, name: "Anger of the Gods" },
-        { count: 2, name: "Deflecting Palm" }
+        { count: 3, name: "Cleansing Wildfire" },
+        { count: 1, name: "Crimson Fleet Commodore" },
+        { count: 4, name: "Pyroblast" },
+        { count: 1, name: "Red Elemental Blast" },
+        { count: 1, name: "Sazacap's Brew" },
+        { count: 3, name: "Searing Blaze" },
+        { count: 2, name: "Tectonic Hazard" }
       ],
-      matchups: ["Murktide", "Amulet Titan", "Rhinos"],
+      matchups: ["Mono U Faeries", "Tron", "Dimir Control"],
       // Each matchup's IN total equals its OUT total.
-      //   Murktide:     OUT 5 (Blaze 3, Skewer 2) = IN 5 (Vortex 3, Moon 2)
-      //   Amulet Titan: OUT 6 (Swiftspear 4, Blaze 2) = IN 6 (Moon 3, Palm 3)
-      //   Rhinos:       OUT 4 (Eidolon 3, Blaze 1) = IN 4 (Anger 3, Skullcrack 1)
+      //   Mono U Faeries: OUT 4 (Fireblast 3, Grab the Prize 1) = IN 4 (Pyroblast 4)
+      //   Tron:           OUT 3 (Fireblast 3) = IN 3 (Cleansing Wildfire 3)
+      //   Dimir Control:  OUT 6 (Lava Dart 2, Fireblast 3, Sazacap's Brew 1)
+      //                   = IN 6 (Pyroblast 4, Red Elemental Blast 1, Crimson Fleet Commodore 1)
       plan: {
-        "Murktide": {
-          "Searing Blaze": { dir: "out", count: 3 },
-          "Skewer the Critics": { dir: "out", count: 2 },
-          "Roiling Vortex": { dir: "in", count: 3 },
-          "Blood Moon": { dir: "in", count: 2 }
+        "Mono U Faeries": {
+          "Fireblast": { dir: "out", count: 3 },
+          "Grab the Prize": { dir: "out", count: 1 },
+          "Pyroblast": { dir: "in", count: 4 }
         },
-        "Amulet Titan": {
-          "Monastery Swiftspear": { dir: "out", count: 4 },
-          "Searing Blaze": { dir: "out", count: 2 },
-          "Blood Moon": { dir: "in", count: 3 },
-          "Deflecting Palm": { dir: "in", count: 3 }
+        "Tron": {
+          "Fireblast": { dir: "out", count: 3 },
+          "Cleansing Wildfire": { dir: "in", count: 3 }
         },
-        "Rhinos": {
-          "Eidolon of the Great Revel": { dir: "out", count: 3 },
-          "Searing Blaze": { dir: "out", count: 1 },
-          "Anger of the Gods": { dir: "in", count: 3 },
-          "Skullcrack": { dir: "in", count: 1 }
+        "Dimir Control": {
+          "Lava Dart": { dir: "out", count: 2 },
+          "Fireblast": { dir: "out", count: 3 },
+          "Sazacap's Brew": { dir: "out", count: 1 },
+          "Pyroblast": { dir: "in", count: 4 },
+          "Red Elemental Blast": { dir: "in", count: 1 },
+          "Crimson Fleet Commodore": { dir: "in", count: 1 }
         }
       }
     };
@@ -77,11 +74,6 @@ const SampleCards = {
         { title: "Sideboard", total: this.sideboard.reduce((a, r) => a + r.count, 0), rows: this.sideboard }
       ];
     },
-    /**
-     * Build the row set PrintCard expects: main then side, with planByMatchup
-     * keyed by matchup. Only include rows that have at least one plan so the
-     * sample shows realistic filtering.
-     */
     guideRows() {
       const build = (list, isSide) => {
         const byName = new Map();

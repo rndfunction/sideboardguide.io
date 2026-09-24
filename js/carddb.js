@@ -158,7 +158,23 @@ const ROWS = [
   ["Steam Vents", "", 0, "Land - Island Mountain", "UR", "({T}: Add {U} or {R}.) As ~ enters, you may pay 2 life. If you don't, it enters tapped."],
   ["Overgrown Tomb", "", 0, "Land - Swamp Forest", "BG", "({T}: Add {B} or {G}.) As ~ enters, you may pay 2 life. If you don't, it enters tapped."],
   ["Sacred Foundry", "", 0, "Land - Mountain Plains", "RW", "({T}: Add {R} or {W}.) As ~ enters, you may pay 2 life. If you don't, it enters tapped."],
-  ["Breeding Pool", "", 0, "Land - Forest Island", "GU", "({T}: Add {G} or {U}.) As ~ enters, you may pay 2 life. If you don't, it enters tapped."]
+  ["Breeding Pool", "", 0, "Land - Forest Island", "GU", "({T}: Add {G} or {U}.) As ~ enters, you may pay 2 life. If you don't, it enters tapped."],
+
+  // --- Pauper Mono Red Madness / Burn ---
+  ["Faithless Looting", "{R}", 1, "Sorcery", "R", "Draw two cards, then discard two cards. Flashback {2}{R}."],
+  ["Fiery Temper", "{1}{R}{R}", 3, "Instant", "R", "~ deals 3 damage to any target. Madness {R}."],
+  ["Fireblast", "{4}{R}{R}", 6, "Instant", "R", "You may sacrifice two Mountains rather than pay this spell's mana cost. ~ deals 4 damage to any target."],
+  ["Grab the Prize", "{R}", 1, "Sorcery", "R", "As an additional cost to cast this spell, discard a card. Draw two cards. ~ deals 2 damage to any target."],
+  ["Guttersnipe", "{2}{R}", 3, "Creature - Goblin Shaman", "R", "Whenever you cast an instant or sorcery spell, ~ deals 2 damage to each opponent."],
+  ["Highway Robbery", "{1}{R}", 2, "Sorcery", "R", "You may discard a card or sacrifice a land. If you do, draw two cards. Plot {1}{R}."],
+  ["Kessig Flamebreather", "{1}{R}", 2, "Creature - Human Shaman", "R", "Whenever you cast a noncreature spell, ~ deals 1 damage to each opponent."],
+  ["Lava Dart", "{R}", 1, "Instant", "R", "~ deals 1 damage to any target. Flashback - Sacrifice a Mountain."],
+  ["Sazacap's Brew", "{R}", 1, "Instant", "R", "Target player draws two cards. Target creature gets +2/+0 until end of turn. You may sacrifice a Food rather than pay this spell's mana cost."],
+  ["Sneaky Snacker", "{2}{R}", 3, "Creature - Goblin Rogue", "R", "Flying. When ~ enters, create a Food token."],
+  ["Cleansing Wildfire", "{1}{R}", 2, "Sorcery", "R", "Destroy target land. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle. Draw a card."],
+  ["Crimson Fleet Commodore", "{3}{R}", 4, "Creature - Orc Pirate", "R", "When ~ enters, you may discard a card. If you do, draw a card. Treasure token."],
+  ["Searing Blaze", "{R}{R}", 2, "Instant", "R", "~ deals 3 damage to target creature and 1 damage to that creature's controller. Landfall - If you had a land enter the battlefield under your control this turn, ~ deals 3 damage to that creature and 3 damage to that creature's controller instead."],
+  ["Tectonic Hazard", "{R}", 1, "Sorcery", "R", "~ deals 1 damage to each creature and each opponent."]
 ];
 
 // Index by lowercased name for O(1) lookup.
