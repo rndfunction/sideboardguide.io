@@ -10,9 +10,13 @@
 //
 // Reference: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow
 
+// GitHub's device-flow endpoints don't send CORS headers, so browsers
+// can't call them directly. We proxy through a small Cloudflare Worker
+// that forwards the two POST requests and adds the CORS headers.
+const WORKER_BASE = "https://sideboardguide-auth.rndfunction.workers.dev";
 const CLIENT_ID = "Ov23liO6o1nKggvOuI4R";
-const DEVICE_CODE_URL = "https://github.com/login/device/code";
-const TOKEN_URL = "https://github.com/login/oauth/access_token";
+const DEVICE_CODE_URL = WORKER_BASE + "/device/code";
+const TOKEN_URL = WORKER_BASE + "/oauth/access_token";
 const SCOPES = "public_repo";
 const TOKEN_STORAGE_KEY = "mtg-deck-guide:gh-token";
 
