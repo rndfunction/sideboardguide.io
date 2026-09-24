@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-09-24",
+  "note": "Hand-curated lists of common meta decks per format. Edit and commit to update the Quick-add chips. The app falls back to a built-in default if this file cannot be loaded.",
+  "formats": {
+    "Pauper": [
+      "Mono-Red Burn",
+      "Mono-Blue Terror",
+      "Kuldotha Red",
+      "Affinity",
+      "Bogles",
+      "Elves",
+      "Familiars",
+      "Cycle Storm",
+      "Dimir Control",
+      "Grixis Affinity",
+      "Caw-Gates",
+      "Jeskai Ephemerate",
+      "Terror",
+      "Golgari Gardens",
+      "Izzet Faeries",
+      "Mono U Faeries",
+      "Mono Red Madness",
+      "Tron"
+    ],
+    "Modern": [
+      "Murktide",
+      "Jund Saga",
+      "Living End",
+      "Tron",
+      "Amulet Titan",
+      "Burn",
+      "Domain Zoo",
+      "Yawgmoth",
+      "Scam",
+      "Rhinos"
+    ],
+    "Legacy": [
+      "Delver",
+      "Reanimator",
+      "Doomsday",
+      "Sneak and Show",
+      "Lands",
+      "Death and Taxes",
+      "ANT",
+      "Elves",
+      "Painter",
+      "8-Cast"
+    ],
+    "Pioneer": [
+      "Rakdos Midrange",
+      "Mono-Green Devotion",
+      "Azorius Control",
+      "Izzet Phoenix",
+      "Amalia Combo",
+      "Lotus Field",
+      "Greasefang",
+      "Mono-White Humans",
+      "Enigmatic Fires"
+    ],
+    "Standard": [
+      "Mono-Red",
+      "Azorius Control",
+      "Domain Ramp",
+      "Golgari Midrange",
+      "Boros Aggro",
+      "Dimir Midrange",
+      "Toxic",
+      "Mono-Black"
+    ],
+    "Commander": [
+      "Aggro",
+      "Control",
+      "Combo",
+      "Midrange",
+      "Stax",
+      "Group Hug",
+      "Voltron"
+    ]
+  }
+}

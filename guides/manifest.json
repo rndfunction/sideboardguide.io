@@ -3,6 +3,14 @@
   "lastUpdated": "2026-09-24",
   "guides": [
     {
+      "file": "mono-red-madness-pauper.json",
+      "deckName": "Mono Red Madness",
+      "format": "Pauper",
+      "archetype": "Mono Red Madness",
+      "author": "rndfunction",
+      "createdAt": "2026-09-24"
+    },
+    {
       "file": "mono-red-burn-modern.json",
       "deckName": "Mono-Red Burn",
       "format": "Modern",
