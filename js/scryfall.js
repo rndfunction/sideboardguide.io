@@ -54,6 +54,10 @@ function sleep(ms) {
 
 function normalizeCard(card) {
   if (!card) return null;
+  // `colors` is the color(s) from the card's printed mana cost (or color
+  // indicator) — this is what the deck's identity is derived from.
+  // `color_identity` is a broader concept that includes alternate costs
+  // (madness, pitch, etc.) and can over-report the deck's colors.
   return {
     id: card.id,
     name: card.name,
@@ -61,7 +65,7 @@ function normalizeCard(card) {
     cmc: typeof card.cmc === "number" ? card.cmc : 0,
     type_line: card.type_line || "",
     oracle_text: card.oracle_text || "",
-    colors: card.colors || [],
+    colors: Array.isArray(card.colors) ? card.colors : [],
     color_identity: card.color_identity || [],
     rarity: card.rarity || "",
     set: card.set || "",

@@ -170,6 +170,11 @@ const ROWS = [
   ["Kessig Flamebreather", "{1}{R}", 2, "Creature - Human Shaman", "R", "Whenever you cast a noncreature spell, ~ deals 1 damage to each opponent."],
   ["Lava Dart", "{R}", 1, "Instant", "R", "~ deals 1 damage to any target. Flashback - Sacrifice a Mountain."],
   ["Sazacap's Brew", "{R}", 1, "Instant", "R", "Target player draws two cards. Target creature gets +2/+0 until end of turn. You may sacrifice a Food rather than pay this spell's mana cost."],
+  // NOTE on Sneaky Snacker: its madness cost includes U and B, so
+  // Scryfall reports color_identity as UBR. But its printed cost is R,
+  // and it lives in a Mono-Red Pauper shell. We store colors as R and
+  // color_identity as UBR to match Scryfall's behavior while still
+  // reporting the deck as Mono-Red via enrich()'s use of `colors`.
   ["Sneaky Snacker", "{2}{R}", 3, "Creature - Goblin Rogue", "R", "Flying. When ~ enters, create a Food token."],
   ["Cleansing Wildfire", "{1}{R}", 2, "Sorcery", "R", "Destroy target land. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle. Draw a card."],
   ["Crimson Fleet Commodore", "{3}{R}", 4, "Creature - Orc Pirate", "R", "When ~ enters, you may discard a card. If you do, draw a card. Treasure token."],

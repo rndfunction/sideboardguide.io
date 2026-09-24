@@ -16,6 +16,17 @@ if (!Vue || typeof Vue.reactive !== "function") {
   throw new Error("Vue global not found. Ensure /index.html loads vue.global.prod.js before /js/app.js.");
 }
 
+// Cards that see play in decks of a color they aren't. These are
+// excluded from the deck's color-identity derivation because their
+// printed colors don't reflect how the deck actually casts them.
+//
+// Add new entries here as the need arises. The comparison is
+// case-insensitive on the card's name. See the docstring in enrich()
+// for background.
+const COLOR_AGNOSTIC_CARDS = new Set([
+  "sneaky snacker"      // Dimir card played via its Red madness cost in Mono-Red Madness
+]);
+
 export const store = Vue.reactive({
   rawText: "",
   parsed: null,       // { mainboard, sideboard, unparsed }
@@ -95,20 +106,33 @@ function enrich(parsed, map) {
     if (!e.card) missing.push(e.name);
   }
 
-  // Color identity across the deck: union of color_identity on nonland
-  // cards. Lands (fetches, duals, utility) are excluded so that a
-  // Mono-Red deck with a Fiery Islet stays Mono-Red instead of
-  // accidentally reading as Izzet. Also sorted in WUBRG order so the
-  // key matches COLOR_LABEL / COLOR_BACKGROUNDS in titlecard.js.
+  // Deck colors: union of the *colors* field on nonland mainboard cards,
+  // EXCEPT cards on the "color agnostic" list below.
+  //
+  // `colors` is the colors from the card's actual mana cost. That's the
+  // right default for a deck's identity, but there are specific cards
+  // that see play in decks of a color they aren't: they're cast for an
+  // alternate cost (madness, cycling, evoke) that isn't the color on
+  // their card. Sneaky Snacker is the canonical example — a Dimir card
+  // (colors: U, B) that's a staple of Mono-Red Pauper Madness because
+  // its madness cost is Red.
+  //
+  // Lands are excluded too: fetches, duals, and utility lands would
+  // otherwise drag in off-color identities.
+  //
+  // Fall back to color_identity if `colors` isn't present (older local
+  // DB entries may only have color_identity).
   const WUBRG = ["W", "U", "B", "R", "G"];
   const colorSet = new Set();
   for (const e of mainboard) {
     if (!e.card) continue;
+    if (COLOR_AGNOSTIC_CARDS.has((e.name || "").toLowerCase())) continue;
     const tl = e.card.type_line || "";
     if (/(^|\s)land(\s|$)/i.test(tl)) continue;
-    if (e.card.color_identity) {
-      for (const c of e.card.color_identity) colorSet.add(c);
-    }
+    const src = (Array.isArray(e.card.colors) && e.card.colors.length)
+      ? e.card.colors
+      : (e.card.color_identity || []);
+    for (const c of src) colorSet.add(c);
   }
   const sortedColors = WUBRG.filter((c) => colorSet.has(c));
 
