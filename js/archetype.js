@@ -278,6 +278,53 @@ function colorAndArchetype(enriched) {
  * Identify a deck from its enriched form.
  * Returns a short human-friendly name like "Pauper Elves" or "Mono-Red Burn".
  */
+// Tribes that are so common in Magic that naming a deck after them
+// rarely reflects what a player would actually call it. A deck full of
+// Humans isn't "Humans" — it's likely a Burn/Aggro/Midrange deck.
+const GENERIC_TRIBES = new Set([
+  "human", "wizard", "warrior", "soldier", "cleric", "rogue",
+  "shaman", "druid", "scout", "advisor", "noble"
+]);
+
+/**
+ * Detect a "spell-based" archetype by counting damage / counterspells /
+ * discard. Fires before tribe detection so a 12-Human Burn deck doesn't
+ * get named "Humans".
+ *
+ * Returns a short deck name like "Mono-Red Burn", or null.
+ */
+function spellArchetype(enriched) {
+  const stats = enriched.stats || {};
+  const colors = (stats.colors || []).slice().sort().join("");
+  const colorName = COLOR_LABEL[colors] || "";
+
+  let creatures = 0;
+  let burnSpells = 0;
+  let counterspells = 0;
+
+  for (const e of enriched.mainboard || []) {
+    if (!e.card) continue;
+    const tl = e.card.type_line || "";
+    const ot = e.card.oracle_text || "";
+    if (/creature/i.test(tl)) { creatures += e.count; continue; }
+    // Burn: instant/sorcery that deals damage to any target / player / creature.
+    if (/instant|sorcery/i.test(tl) && /deals \d+ damage to (any target|target creature|target player|each opponent)/i.test(ot)) {
+      burnSpells += e.count;
+    }
+    if (/counter target/i.test(ot)) counterspells += e.count;
+  }
+
+  // Burn: many direct-damage spells and few creatures.
+  if (burnSpells >= 6 && creatures <= 14) {
+    return (colorName || "Mono") + " Burn";
+  }
+  // Draw-go control: lots of counters, few creatures.
+  if (counterspells >= 6 && creatures <= 8) {
+    return (colorName || "Control") + " Control";
+  }
+  return null;
+}
+
 export function identifyDeck(enriched) {
   if (!enriched) return "Untitled Deck";
 
@@ -291,21 +338,29 @@ export function identifyDeck(enriched) {
   }
   if (best) return best.deckName;
 
+  // --- Tier 1.5: spell-based archetypes (Burn / Control) ---
+  // Runs before tribe detection so a "Humans" pile of burn spells
+  // gets named Burn instead of the generic creature type.
+  const spell = spellArchetype(enriched);
+  if (spell) return spell;
+
   // --- Tier 2: tribe detection ---
+  // Requires a substantial creature count and a strong majority on the
+  // top tribe. Generic tribes (Humans/Wizards/etc.) are ignored so they
+  // fall through to the color+archetype heuristic instead.
   const { counts, creatureTotal } = creatureSubtypeCounts(enriched);
-  if (creatureTotal >= 12) {
+  if (creatureTotal >= 16) {
     let topSub = null;
     let topCount = 0;
     for (const [sub, n] of counts.entries()) {
       if (n > topCount) { topSub = sub; topCount = n; }
     }
-    if (topSub && topCount / creatureTotal >= 0.3) {
+    if (topSub && !GENERIC_TRIBES.has(topSub) && topCount / creatureTotal >= 0.4) {
       const tribe = TRIBE_NAMES[topSub] || null;
       if (tribe) {
         const stats = enriched.stats || {};
         const colors = (stats.colors || []).slice().sort().join("");
         const colorName = COLOR_LABEL[colors] || "";
-        // e.g. "Mono-Green Elves" / "Azorius Spirits"
         return [colorName, tribe].filter(Boolean).join(" ");
       }
     }

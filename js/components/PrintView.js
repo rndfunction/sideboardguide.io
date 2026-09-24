@@ -57,10 +57,10 @@ const PrintView = {
     };
   },
   mounted() {
-    // Resolve the default title color once we know the deck's colors.
-    if (!this.titleColor) {
-      this.titleColor = defaultColorForDeck(this.deck);
-    }
+    // On mount, always sync the title color to the current deck. A
+    // persisted color from a prior session should not override the
+    // current deck's natural color when the deck is freshly loaded.
+    this.titleColor = defaultColorForDeck(this.deck);
     document.addEventListener("click", this.onDocClick);
     document.addEventListener("keydown", this.onDocKey);
   },
@@ -73,7 +73,20 @@ const PrintView = {
     titleFontKey() { this.persistPrefs(); },
     titleSymbol() { this.persistPrefs(); },
     titleTexture() { this.persistPrefs(); },
-    titleTextureIntensity() { this.persistPrefs(); }
+    titleTextureIntensity() { this.persistPrefs(); },
+    // When a new deck is loaded, reset the title card's background color
+    // to the auto-derived value. Persisted user preferences still apply
+    // while the deck is unchanged, but a fresh decklist means a fresh
+    // color, which is what most users expect.
+    deck: {
+      handler(newDeck, oldDeck) {
+        const newId = newDeck ? (newDeck.stats && newDeck.stats.totalMain) + ":" + ((newDeck.stats && newDeck.stats.colors) || []).join("") : null;
+        const oldId = oldDeck ? (oldDeck.stats && oldDeck.stats.totalMain) + ":" + ((oldDeck.stats && oldDeck.stats.colors) || []).join("") : null;
+        if (newId !== oldId) {
+          this.titleColor = newDeck ? defaultColorForDeck(newDeck) : null;
+        }
+      }
+    }
   },
   computed: {
     colors() {

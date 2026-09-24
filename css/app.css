@@ -1688,11 +1688,7 @@ table.guide-table tr.section-row.sideboard-divider td {
   z-index: 2;
 }
 
-.ptc-top {
-  display: flex;
-  justify-content: center;
-  z-index: 3;
-}
+/* .ptc-top removed — the title card no longer shows decorative pips. */
 
 .ptc-pips {
   display: inline-flex;

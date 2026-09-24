@@ -95,13 +95,22 @@ function enrich(parsed, map) {
     if (!e.card) missing.push(e.name);
   }
 
-  // Color identity across the deck (union of color_identity on main cards).
+  // Color identity across the deck: union of color_identity on nonland
+  // cards. Lands (fetches, duals, utility) are excluded so that a
+  // Mono-Red deck with a Fiery Islet stays Mono-Red instead of
+  // accidentally reading as Izzet. Also sorted in WUBRG order so the
+  // key matches COLOR_LABEL / COLOR_BACKGROUNDS in titlecard.js.
+  const WUBRG = ["W", "U", "B", "R", "G"];
   const colorSet = new Set();
   for (const e of mainboard) {
-    if (e.card && e.card.color_identity) {
+    if (!e.card) continue;
+    const tl = e.card.type_line || "";
+    if (/(^|\s)land(\s|$)/i.test(tl)) continue;
+    if (e.card.color_identity) {
       for (const c of e.card.color_identity) colorSet.add(c);
     }
   }
+  const sortedColors = WUBRG.filter((c) => colorSet.has(c));
 
   // Mana curve: buckets 0..7+ by cmc, counting maindeck only, non-lands.
   const curve = [0, 0, 0, 0, 0, 0, 0, 0]; // index 0..6, 7 = 7+
@@ -125,7 +134,7 @@ function enrich(parsed, map) {
     stats: {
       totalMain,
       totalSide,
-      colors: Array.from(colorSet).sort(),
+      colors: sortedColors,
       curve,
       nonlandCount,
       landCount,

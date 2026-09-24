@@ -120,19 +120,7 @@ const PrintTitleCard = {
         backgroundRepeat: "repeat"
       };
     },
-    pips() {
-      // Each pip is a real mana symbol image, with a fallback for offline.
-      return (this.colors || [])
-        .filter((c) => /^[WUBRG]$/.test(c))
-        .map((c) => {
-          const src = symbolSources(c);
-          return {
-            letter: c,
-            primary: src.primary,
-            fallback: src.fallback
-          };
-        });
-    },
+
     dateLabel() {
       const d = new Date();
       const y = d.getFullYear();
@@ -209,18 +197,7 @@ const PrintTitleCard = {
         :style="textureStyle"
         aria-hidden="true"
       ></div>
-      <div class="ptc-top">
-        <span v-if="pips.length" class="ptc-pips">
-          <img
-            v-for="pip in pips"
-            :key="pip.letter"
-            class="ptc-pip-img"
-            :src="pip.primary || pip.fallback"
-            :alt="pip.letter + ' mana'"
-            @error="onPipError($event, pip)"
-          />
-        </span>
-      </div>
+
 
       <img
         v-if="watermarkPip"
