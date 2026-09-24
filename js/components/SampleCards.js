@@ -28,12 +28,12 @@ const SampleCards = {
         { count: 4, name: "Rift Bolt" },
         { count: 4, name: "Skewer the Critics" },
         { count: 4, name: "Eidolon of the Great Revel" },
-        { count: 3, name: "Searing Blaze" },
+        { count: 4, name: "Searing Blaze" },
         { count: 4, name: "Mountain" },
         { count: 4, name: "Arid Mesa" },
         { count: 4, name: "Scalding Tarn" },
         { count: 4, name: "Ramunap Ruins" },
-        { count: 3, name: "Fiery Islet" },
+        { count: 4, name: "Fiery Islet" },
         { count: 8, name: "Snow-Covered Mountain" }
       ],
       sideboard: [
