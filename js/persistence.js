@@ -5,8 +5,9 @@ const SAVE_KEY = "mtg-deck-guide:saved";
 const FORMAT_KEY = "mtg-deck-guide:format";
 
 // Presets are curated, ordered lists of common matchups per format.
-// Add new formats here and they'll show up in the toolbar dropdown.
-export const PRESET_MATCHUPS = {
+// At runtime, these are refreshed from /presets.json by loadPresets().
+// If that fetch fails, we keep whatever's here as the built-in fallback.
+export let PRESET_MATCHUPS = {
   Pauper: [
     "Mono-Red Burn",
     "Mono-Blue Terror",
@@ -49,6 +50,45 @@ export const PRESET_MATCHUPS = {
 // Ordered list of format names for dropdowns.
 export const FORMAT_LIST = Object.keys(PRESET_MATCHUPS);
 
+// ---------------------------------------------------------------------------
+// Preset loading from /presets.json
+// ---------------------------------------------------------------------------
+
+let presetsLoaded = false;
+
+/**
+ * Fetch /presets.json and merge its format lists into PRESET_MATCHUPS.
+ * Safe to call multiple times — subsequent calls are no-ops once a
+ * successful load has happened.
+ */
+export async function loadPresets() {
+  if (presetsLoaded) return PRESET_MATCHUPS;
+  try {
+    const res = await fetch("presets.json", { cache: "no-cache" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (data && data.formats && typeof data.formats === "object") {
+      const clean = {};
+      for (const [fmt, list] of Object.entries(data.formats)) {
+        if (Array.isArray(list)) {
+          clean[fmt] = list.filter((s) => typeof s === "string" && s.trim());
+        }
+      }
+      if (Object.keys(clean).length) {
+        // Merge into the existing map (keep any built-in formats the
+        // JSON doesn't mention).
+        for (const [fmt, list] of Object.entries(clean)) {
+          PRESET_MATCHUPS[fmt] = list;
+        }
+      }
+    }
+    presetsLoaded = true;
+  } catch (_) {
+    // Keep the built-in fallback; don't mark as loaded so a retry is possible.
+  }
+  return PRESET_MATCHUPS;
+}
+
 // Default format for first-time users.
 const DEFAULT_FORMAT = "Pauper";
 
@@ -58,7 +98,7 @@ const DEFAULT_FORMAT = "Pauper";
 export function getLastFormat() {
   try {
     const v = localStorage.getItem(FORMAT_KEY);
-    if (v && PRESET_MATCHUPS[v]) return v;
+    if (v) return v;
   } catch (_) {}
   return DEFAULT_FORMAT;
 }
@@ -68,7 +108,7 @@ export function getLastFormat() {
  */
 export function setLastFormat(format) {
   try {
-    if (format && PRESET_MATCHUPS[format]) {
+    if (format) {
       localStorage.setItem(FORMAT_KEY, format);
     }
   } catch (_) {}
