@@ -1,4 +1,4 @@
-// Toolbar: save/load/forget + print-preview toggle + preset matchups.
+// Toolbar: format + quick-add + export/import + browse/submit + print toggle.
 import {
   loadPresets,
   FORMAT_LIST,
@@ -29,8 +29,17 @@ const GuideToolbar = {
     return {
       lastMessage: "",
       lastMessageClass: "ok",
-      presetFormat: getLastFormat()
+      presetFormat: getLastFormat(),
+      // Populated in mounted() from /presets.json (or the built-in fallback).
+      presets: {}
     };
+  },
+  async mounted() {
+    try {
+      this.presets = await loadPresets();
+    } catch (_) {
+      this.presets = {};
+    }
   },
   watch: {
     presetFormat(val) {
@@ -42,7 +51,7 @@ const GuideToolbar = {
       return FORMAT_LIST;
     },
     presetList() {
-      return PRESET_MATCHUPS[this.presetFormat] || [];
+      return this.presets[this.presetFormat] || [];
     },
     newPresets() {
       // Only show presets that aren't already added.
@@ -55,7 +64,6 @@ const GuideToolbar = {
       this.lastMessageClass = cls || "ok";
       setTimeout(() => { this.lastMessage = ""; }, 2500);
     },
-
     onAddPreset(matchup) {
       this.$emit("add-matchups", [matchup]);
     },
@@ -112,7 +120,6 @@ const GuideToolbar = {
           <option v-for="f in presetFormats" :key="f" :value="f">Format: {{ f }}</option>
         </select>
         <div class="toolbar-actions">
-
           <button type="button" class="usa-button usa-button--outline" @click="onExportShare" title="Download this guide as a .json file">Export</button>
           <button type="button" class="usa-button usa-button--outline" @click="onImportShareClick" title="Load a guide from a .json file">Import</button>
           <input
