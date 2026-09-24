@@ -2318,6 +2318,106 @@ th.card-col:hover .card-preview-icon,
 }
 
 /* ============================================================
+   Device auth dialog (GitHub OAuth device flow)
+   ============================================================ */
+
+.device-auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.device-auth-panel {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 30rem;
+  color: var(--site-text);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+}
+
+.device-auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--site-border);
+}
+
+.device-auth-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.device-auth-close {
+  background: transparent;
+  border: none;
+  color: var(--site-text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.3rem;
+}
+
+.device-auth-close:hover { color: var(--site-text); }
+
+.device-auth-body,
+.device-auth-status {
+  padding: 1rem 1.15rem 1.25rem;
+}
+
+.device-auth-status {
+  color: var(--site-text-muted);
+  text-align: center;
+}
+
+.device-auth-error {
+  color: #f4828c;
+}
+
+.device-auth-instructions {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--site-text-muted);
+}
+
+.device-auth-code {
+  font-family: "Courier New", monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-align: center;
+  padding: 0.75rem;
+  background: var(--site-surface-alt);
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  color: var(--site-text);
+  user-select: all;
+}
+
+.device-auth-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.device-auth-waiting {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--site-text-muted);
+  font-style: italic;
+}
+
+/* ============================================================
    Community guide browser (modal)
    ============================================================ */
 

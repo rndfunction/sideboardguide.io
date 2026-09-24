@@ -9,8 +9,10 @@ import PrintView from "./components/PrintView.js";
 import CardPreview from "./components/CardPreview.js";
 import GuideBrowser from "./components/GuideBrowser.js";
 import GuideLibrary from "./components/GuideLibrary.js";
+import DeviceAuthDialog from "./components/DeviceAuthDialog.js";
 import { buildSharePayload } from "./persistence.js";
 import { submitGuide, suggestFilename } from "./guides.js";
+import { getStoredToken, storeToken, clearToken } from "./githubauth.js";
 import {
   store,
   loadDecklist,
@@ -40,7 +42,10 @@ const app = Vue.createApp({
       mode: (typeof window !== "undefined" && window.location.hash === "#browse") ? "browse" : "build",
       // Submission feedback for the toolbar and library.
       submitStatus: "",
-      submitStatusClass: "ok"
+      submitStatusClass: "ok",
+      // Device flow auth state.
+      showAuthDialog: false,
+      _pendingSubmit: null
     };
   },
   computed: {
@@ -168,12 +173,44 @@ const app = Vue.createApp({
         archetype: store.deckName || "",
         author: ""
       };
+
+      const token = getStoredToken();
+      if (!token) {
+        // Need to auth first; stash the payload and open the dialog.
+        this._pendingSubmit = { payload, filename, meta };
+        this.showAuthDialog = true;
+        return;
+      }
+
+      await this._doSubmit(payload, filename, meta, token);
+    },
+    async _doSubmit(payload, filename, meta, token) {
       try {
-        await submitGuide(payload, filename, meta);
+        await submitGuide(payload, filename, meta, token);
         this.flashSubmit("Submitted. A maintainer will review it shortly.", "ok");
       } catch (err) {
-        this.flashSubmit(String(err.message || err), "error");
+        const msg = String(err.message || err);
+        // If the token is no longer valid, clear it and offer to re-auth.
+        if (/HTTP 401/.test(msg) || /Not authorized/.test(msg)) {
+          clearToken();
+          this.flashSubmit("Session expired. Click Submit again to re-authorize.", "error");
+        } else {
+          this.flashSubmit(msg, "error");
+        }
       }
+    },
+    async onAuthAuthorized(token) {
+      storeToken(token);
+      this.showAuthDialog = false;
+      const pending = this._pendingSubmit;
+      this._pendingSubmit = null;
+      if (pending) {
+        await this._doSubmit(pending.payload, pending.filename, pending.meta, token);
+      }
+    },
+    onAuthClose() {
+      this.showAuthDialog = false;
+      this._pendingSubmit = null;
     },
     setMode(next) {
       if (next !== "build" && next !== "browse") return;
@@ -197,6 +234,7 @@ app.component("print-view", PrintView);
 app.component("card-preview", CardPreview);
 app.component("guide-browser", GuideBrowser);
 app.component("guide-library", GuideLibrary);
+app.component("device-auth-dialog", DeviceAuthDialog);
 
 // Handle ?preview=<url> before mounting: fetch that guide and load it.
 (async () => {

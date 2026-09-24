@@ -220,14 +220,18 @@ export function suggestFilename(deckName) {
 }
 
 /**
- * Submit a guide payload to the community repo. Returns { ok, filename }
- * on success or throws on failure.
+ * Submit a guide payload to the community repo using an OAuth token
+ * obtained from the device flow. Returns { ok, filename } on success
+ * or throws on failure.
  *
  * @param {object} payload   the shared guide object (buildSharePayload output)
  * @param {string} filename  suggested filename (see suggestFilename)
  * @param {object} meta      optional metadata: { deckName, format, archetype, author }
+ * @param {string} token     OAuth access token from githubauth.js
  */
-export async function submitGuide(payload, filename, meta) {
+export async function submitGuide(payload, filename, meta, token) {
+  if (!token) throw new Error("Not authorized. Please sign in with GitHub.");
+
   // Client-side throttle to prevent accidental double-clicks. Real
   // anti-abuse lives server-side in the GitHub Action.
   try {
@@ -253,7 +257,8 @@ export async function submitGuide(payload, filename, meta) {
     method: "POST",
     headers: {
       "Accept": "application/vnd.github+json",
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
     },
     body: JSON.stringify(body)
   });

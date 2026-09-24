@@ -165,6 +165,13 @@
     @close="onCloseGuideBrowser"
     @load-share="onLoadSharedGuide"
   ></guide-browser>
+
+  <!-- GitHub device-flow auth dialog (shown when submitting) -->
+  <device-auth-dialog
+    :open="showAuthDialog"
+    @authorized="onAuthAuthorized"
+    @close="onAuthClose"
+  ></device-auth-dialog>
 </div>
 
 <script type="module" src="js/app.js"></script>
