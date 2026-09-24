@@ -6,6 +6,7 @@ import SampleCards from "./components/SampleCards.js";
 import GuideToolbar from "./components/GuideToolbar.js";
 import DeckGrid from "./components/DeckGrid.js";
 import PrintView from "./components/PrintView.js";
+import CardPreview from "./components/CardPreview.js";
 import {
   store,
   loadDecklist,
@@ -76,6 +77,29 @@ const app = Vue.createApp({
         store.deckName = saved.deckName;
       }
     },
+    async onImportShare(parsed) {
+      // The share schema nests the decklist under `deck.rawText`.
+      // Reuse onLoadState for the core state, then handle share-only bits.
+      const share = parsed || {};
+      const deck = share.deck || {};
+      await this.onLoadState({
+        rawText: deck.rawText,
+        matchups: share.matchups,
+        plan: share.plan,
+        deckName: deck.name
+      });
+      // Persist the loaded guide locally so subsequent reloads keep it.
+      try {
+        const { saveGuide } = await import("./persistence.js");
+        saveGuide({
+          rawText: deck.rawText || store.rawText,
+          matchups: store.matchups,
+          plan: store.plan,
+          deckName: store.deckName,
+          format: deck.format || null
+        });
+      } catch (_) { /* noop */ }
+    },
     onDeckNameChange(name) {
       setDeckName(name);
     },
@@ -106,4 +130,5 @@ app.component("sample-cards", SampleCards);
 app.component("guide-toolbar", GuideToolbar);
 app.component("deck-grid", DeckGrid);
 app.component("print-view", PrintView);
+app.component("card-preview", CardPreview);
 app.mount("#app");

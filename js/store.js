@@ -27,6 +27,9 @@ export const store = Vue.reactive({
   loading: false,
   error: null,
   status: "",         // user-facing progress text
+  // Hover preview state (driven by any component; rendered by CardPreview).
+  hoveredCard: null,        // { image, name } | null
+  hoveredCardPos: { x: 0, y: 0 },
   _lastMatchupId: 0
 });
 

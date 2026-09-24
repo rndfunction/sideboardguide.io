@@ -162,3 +162,97 @@ export function clearSaved() {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
 }
 
+// ---------------------------------------------------------------------------
+// Share format (.json)
+// ---------------------------------------------------------------------------
+//
+// A portable, versioned snapshot of a sideboard guide. Designed so a future
+// repository can consume or produce these files unchanged.
+//
+// {
+//   "format": "mtg-sideboard-guide",
+//   "version": 1,
+//   "generator": "Sideboard Guide Builder",
+//   "createdAt": "2026-09-24T15:00:00.000Z",
+//   "deck": { "name": "...", "format": "Pauper", "archetype": "...", "rawText": "..." },
+//   "matchups": ["Mono-Red Burn", ...],
+//   "plan": { "Card Name": { "Matchup": { "dir": "in"|"out", "count": N } } },
+//   "titleCard": { "color": "#hex", "fontKey": "...", "symbol": "...", "texture": "...", "intensity": "..." }
+// }
+
+export const SHARE_FORMAT = "mtg-sideboard-guide";
+export const SHARE_VERSION = 1;
+
+/**
+ * Build the share payload object from current app state.
+ */
+export function buildSharePayload(state) {
+  return {
+    format: SHARE_FORMAT,
+    version: SHARE_VERSION,
+    generator: "Sideboard Guide Builder",
+    createdAt: new Date().toISOString(),
+    deck: {
+      name: state.deckName || "",
+      format: state.format || "",
+      archetype: state.archetype || "",
+      rawText: state.rawText || ""
+    },
+    matchups: Array.isArray(state.matchups) ? state.matchups.slice() : [],
+    plan: state.plan ? JSON.parse(JSON.stringify(state.plan)) : {},
+    titleCard: {
+      color: state.titleColor || null,
+      fontKey: state.titleFontKey || null,
+      symbol: state.titleSymbol || null,
+      texture: state.titleTexture || null,
+      intensity: state.titleTextureIntensity || null
+    }
+  };
+}
+
+/**
+ * Serialize and trigger a .json download.
+ */
+export function downloadShare(state, filename) {
+  const payload = buildSharePayload(state);
+  const text = JSON.stringify(payload, null, 2);
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safe = (state.deckName || "sideboard-guide")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .toLowerCase();
+  a.href = url;
+  a.download = (filename || safe) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Validate and parse a share file. Returns the parsed object on success,
+ * or { error: "..." } on failure.
+ */
+export function parseShare(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    return { error: "Not a valid JSON file." };
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { error: "File is empty or malformed." };
+  }
+  if (parsed.format !== SHARE_FORMAT) {
+    return { error: "Not a Sideboard Guide file." };
+  }
+  if (typeof parsed.version !== "number" || parsed.version > SHARE_VERSION) {
+    return { error: "This file was made by a newer version. Update the app and try again." };
+  }
+  if (!parsed.deck || typeof parsed.deck.rawText !== "string") {
+    return { error: "File is missing deck data." };
+  }
+  return parsed;
+}
+

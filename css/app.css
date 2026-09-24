@@ -115,6 +115,44 @@ body {
   color: var(--site-text);
 }
 
+/* Site title is a reset link back to the app root. Keeps the same
+   visual weight as a heading but adds a subtle hover affordance. */
+.site-title-link {
+  color: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  transition: color 0.15s;
+}
+
+.site-title-link:hover {
+  color: var(--site-accent);
+}
+
+/* Placeholder logo mark in front of the site title. */
+.site-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--site-accent);
+  transition: transform 0.2s, color 0.15s;
+}
+
+.site-title-link:hover .site-logo {
+  color: inherit;
+  transform: rotate(-4deg);
+}
+
+.site-logo svg {
+  display: block;
+}
+
+.site-title-text {
+  display: inline-block;
+}
+
 .site-header {
   padding: 1.5rem 0 1rem;
   border-bottom: 4px solid var(--mtg-gold);
@@ -1051,8 +1089,10 @@ table.guide-table tr.section-row td {
 }
 
 .pc-out {
+  /* Direction is conveyed by the label ("OUT N") and the cell's
+     background tint. A strikethrough over the whole number reads as
+     "crossed out" rather than "boarded out". */
   color: #000;
-  text-decoration: line-through;
 }
 
 .pc-row-side .pc-col-card {
@@ -1994,6 +2034,76 @@ table.guide-table tr.section-row.sideboard-divider td {
 /* Status messages on the dark surface. */
 .toolbar-msg.ok { color: #7ac886; }
 .toolbar-msg.error { color: #f4828c; }
+
+/* ============================================================
+   Card hover preview (global floating overlay)
+   ============================================================ */
+
+/* Small image-icon next to each card name; only this triggers the
+   preview so hovering the whole row stays quiet. */
+.card-preview-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0 0.1rem;
+  margin-right: 0.1rem;
+  color: var(--site-text-muted);
+  opacity: 0.35;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+th.card-col:hover .card-preview-icon,
+.card-preview-icon:hover {
+  opacity: 0.85;
+  color: var(--site-accent);
+}
+
+.card-preview-icon svg {
+  display: block;
+}
+
+.card-preview {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.6));
+  transition: opacity 0.08s ease;
+}
+
+.card-preview-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.card-preview-empty {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  color: var(--site-text);
+}
+
+.card-preview-name {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.card-preview-note {
+  font-size: 0.8rem;
+  color: var(--site-text-muted);
+}
+
+/* Hidden file input used by the toolbar's Import button. */
+.toolbar-import-input {
+  display: none;
+}
 
 /* ============================================================
    Print / PDF icon buttons in the print controls.

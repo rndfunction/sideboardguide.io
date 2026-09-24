@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sideboard Guide Builder</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23c8804a' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6' y='3' width='20' height='26' rx='2' transform='rotate(-3 16 16)'/%3E%3Ccircle cx='16' cy='12' r='2.4'/%3E%3Cpath d='M9 24 L16 15 L23 24 Z' opacity='0.85'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://unpkg.com/@trussworks/react-uswds@3.0.0/lib/css/styles.css">
 <link rel="stylesheet" href="css/app.css">
 <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
@@ -13,7 +14,24 @@
   <div class="app-shell">
     <main class="grid-container">
       <header class="site-header">
-        <h1>Sideboard Guide Builder</h1>
+        <h1>
+          <a href="./" class="site-title-link" title="Start fresh">
+            <span class="site-logo" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+                <!-- Back card -->
+                <rect x="6" y="3" width="20" height="26" rx="2" transform="rotate(-8 16 16)" opacity="0.4"></rect>
+                <!-- Middle card -->
+                <rect x="6" y="3" width="20" height="26" rx="2" transform="rotate(-3 16 16)" opacity="0.7"></rect>
+                <!-- Front card -->
+                <rect x="6" y="3" width="20" height="26" rx="2"></rect>
+                <!-- Simple mark on front card -->
+                <circle cx="16" cy="12" r="2.4"></circle>
+                <path d="M9 24 L16 15 L23 24 Z" opacity="0.85"></path>
+              </svg>
+            </span>
+            <span class="site-title-text">Sideboard Guide Builder</span>
+          </a>
+        </h1>
         <p class="usa-intro">Paste a decklist. Build a sideboard guide. Print sleeve-sized cards for the deckbox.</p>
       </header>
 
@@ -31,17 +49,19 @@
             @reset="onReset"
           ></deck-input>
 
-          <guide-toolbar
-            v-if="enriched"
-            :deck-name="deckName"
-            :raw-text="store.rawText"
-            :matchups="matchups"
-            :plan="plan"
-            :print-open="showPrint"
-            @load-state="onLoadState"
-            @add-matchups="onAddMatchups"
-            @toggle-print="onTogglePrint"
-          ></guide-toolbar>
+      <guide-toolbar
+        v-if="enriched"
+        :deck-name="deckName"
+        :raw-text="store.rawText"
+        :matchups="matchups"
+        :plan="plan"
+        :print-open="showPrint"
+        :format="selectedFormat"
+        @load-state="onLoadState"
+        @add-matchups="onAddMatchups"
+        @toggle-print="onTogglePrint"
+        @import-share="onImportShare"
+      ></guide-toolbar>
 
           <deck-grid
             v-if="enriched"
@@ -106,6 +126,9 @@
       @close="onClosePrint"
     ></print-view>
   </div>
+
+  <!-- Global card image hover preview -->
+  <card-preview></card-preview>
 </div>
 
 <script type="module" src="js/app.js"></script>

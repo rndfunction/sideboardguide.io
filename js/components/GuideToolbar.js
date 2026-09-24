@@ -6,7 +6,9 @@ import {
   PRESET_MATCHUPS,
   FORMAT_LIST,
   getLastFormat,
-  setLastFormat
+  setLastFormat,
+  downloadShare,
+  parseShare
 } from "../persistence.js";
 
 const GuideToolbar = {
@@ -15,9 +17,17 @@ const GuideToolbar = {
     rawText: { type: String, default: "" },
     matchups: { type: Array, default: () => [] },
     plan: { type: Object, default: () => ({}) },
-    printOpen: { type: Boolean, default: false }
+    printOpen: { type: Boolean, default: false },
+    // Extra state needed for the JSON share payload (title card prefs etc.).
+    format: { type: String, default: "" },
+    archetype: { type: String, default: "" },
+    titleColor: { type: String, default: null },
+    titleFontKey: { type: String, default: null },
+    titleSymbol: { type: String, default: null },
+    titleTexture: { type: String, default: null },
+    titleTextureIntensity: { type: String, default: null }
   },
-  emits: ["load-state", "add-matchups", "toggle-print"],
+  emits: ["load-state", "add-matchups", "toggle-print", "import-share"],
   data() {
     return {
       lastMessage: "",
@@ -77,6 +87,43 @@ const GuideToolbar = {
     },
     onTogglePrint() {
       this.$emit("toggle-print");
+    },
+    onExportShare() {
+      downloadShare({
+        deckName: this.deckName,
+        format: this.format,
+        archetype: this.archetype,
+        rawText: this.rawText,
+        matchups: this.matchups,
+        plan: this.plan,
+        titleColor: this.titleColor,
+        titleFontKey: this.titleFontKey,
+        titleSymbol: this.titleSymbol,
+        titleTexture: this.titleTexture,
+        titleTextureIntensity: this.titleTextureIntensity
+      });
+      this.flash("Downloaded share file.", "ok");
+    },
+    onImportShareClick() {
+      const el = this.$refs.importShareInput;
+      if (el) el.click();
+    },
+    onImportShareChange(evt) {
+      const file = evt.target.files && evt.target.files[0];
+      evt.target.value = "";
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const parsed = parseShare(String(reader.result || ""));
+        if (parsed.error) {
+          this.flash(parsed.error, "error");
+          return;
+        }
+        this.$emit("import-share", parsed);
+        this.flash("Loaded shared guide.", "ok");
+      };
+      reader.onerror = () => this.flash("Could not read file.", "error");
+      reader.readAsText(file);
     }
   },
   template: `
@@ -90,6 +137,15 @@ const GuideToolbar = {
           <button type="button" class="usa-button usa-button--outline" @click="onSave">Save</button>
           <button type="button" class="usa-button usa-button--outline" @click="onLoad">Load</button>
           <button type="button" class="usa-button usa-button--outline" @click="onClear">Forget</button>
+          <button type="button" class="usa-button usa-button--outline" @click="onExportShare" title="Download this guide as a .json file">Export</button>
+          <button type="button" class="usa-button usa-button--outline" @click="onImportShareClick" title="Load a guide from a .json file">Import</button>
+          <input
+            ref="importShareInput"
+            type="file"
+            accept=".json,application/json"
+            class="toolbar-import-input"
+            @change="onImportShareChange"
+          />
           <button type="button" class="usa-button" @click="onTogglePrint">
             {{ printOpen ? "Hide print preview" : "Show print preview" }}
           </button>
