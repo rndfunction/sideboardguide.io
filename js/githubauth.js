@@ -165,16 +165,33 @@ export async function fetchUser(token) {
         "Authorization": "Bearer " + token
       }
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn("[fetchUser] HTTP " + res.status + " from api.github.com/user");
+      return null;
+    }
     const data = await res.json();
     const user = { login: data.login || "", name: data.name || "" };
     if (user.login) {
       try { sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user)); } catch (_) {}
+    } else {
+      console.warn("[fetchUser] Response contained no login:", data);
     }
     return user;
-  } catch (_) {
+  } catch (err) {
+    // Common cause: CORS or network failure. Log so the failure is
+    // diagnosable from the DevTools console instead of being invisible.
+    console.warn("[fetchUser] fetch failed:", String(err));
     return null;
   }
+}
+
+/**
+ * Debug helper: expose fetchUser on window so it can be called from the
+ * console with the current token. Only used during development.
+ */
+if (typeof window !== "undefined") {
+  window.__fetchUser = fetchUser;
+  window.__getStoredToken = getStoredToken;
 }
 
 function sleep(ms) {

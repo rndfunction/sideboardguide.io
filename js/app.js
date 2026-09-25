@@ -83,7 +83,7 @@ const app = Vue.createApp({
     removeMatchup(name) { removeMatchup(name); },
     onRenameMatchup(oldName, newName) { renameMatchup(oldName, newName); },
     onToggleCard(cardName, matchup, section) { cycleCard(cardName, matchup, section); },
-    onSetCardPlan(cardName, matchup, dir, count) { setCardPlan(cardName, matchup, dir, count); },
+    onSetCardPlan(cardName, matchup, dir, count, section) { setCardPlan(cardName, matchup, dir, count, section); },
     async onLoadState(saved) {
       if (saved.rawText) {
         await loadDecklist(saved.rawText);

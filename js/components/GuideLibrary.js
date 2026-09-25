@@ -137,7 +137,9 @@ const GuideLibrary = {
 
       <footer class="guide-library-footer">
         <span>
-          Want to share your own? Build a guide, click Export, and submit a pull request at
+          Want to share your own? Build a guide in <strong>Build</strong> mode and click
+          <strong>Submit</strong> — it opens a pull request in the community repository.
+          You can also contribute directly at
           <a href="https://github.com/rndfunction/SideboardGuides" target="_blank" rel="noopener">github.com/rndfunction/SideboardGuides</a>.
         </span>
       </footer>

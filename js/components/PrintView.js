@@ -276,10 +276,13 @@ const PrintView = {
       return combined;
     },
     rowsFor(list, pageMatchups, isSide) {
+      // Determine section from the list being processed (main or side).
+      // Matches DeckGrid's section-aware plan keys: name + "@main" | "@side".
+      const section = isSide ? "side" : "main";
       const byName = new Map();
       for (const e of list) {
         if (!byName.has(e.name)) {
-          byName.set(e.name, { name: e.name, count: 0, isSide });
+          byName.set(e.name, { name: e.name, count: 0, isSide, section });
         }
         byName.get(e.name).count += e.count;
       }
@@ -288,15 +291,18 @@ const PrintView = {
         r.planByMatchup = {};
         r.hasAnyPlan = false;
         for (const mu of pageMatchups) {
-          const entry = this.entryFor(r.name, mu);
+          const entry = this.entryFor(r.name, mu, section);
           r.planByMatchup[mu] = entry;
           if (entry) r.hasAnyPlan = true;
         }
       }
       return rows;
     },
-    entryFor(cardName, matchup) {
-      const cardPlan = this.plan[cardName];
+    entryFor(cardName, matchup, section) {
+      // Section-aware lookup: plan keys are name + "@main" | "@side".
+      const s = section === "side" ? "side" : "main";
+      const key = cardName + "@" + s;
+      const cardPlan = this.plan[key];
       if (!cardPlan) return null;
       const entry = cardPlan[matchup];
       if (!entry) return null;

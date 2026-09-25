@@ -76,9 +76,14 @@ All external dependencies load over HTTPS, so the app works from any secure orig
 
 ## Notes
 
+- **Network activity** is limited to four hosts:
+  1. **api.scryfall.com** — card metadata lookups (no auth, no key).
+  2. **cards.scryfall.io** — card images for the hover preview.
+  3. **sideboardguide-auth.rndfunction.workers.dev** — Cloudflare Worker that relays the GitHub OAuth device-flow requests (GitHub's own login endpoints don't send CORS headers).
+  4. **api.github.com** — only when the user clicks Submit, to open a PR against the community repository.
+- All persistent state (decklist, matchups, plans, title card prefs) lives in the browser's localStorage. Nothing is sent anywhere unless you click Submit.
+- Batches of 75 cards with 100ms between requests, in keeping with Scryfall's rate guidance.
 - No API key required; Scryfall's public API is free and unauthenticated.
-- Batches of 75 cards with 100ms between requests.
-- All state lives in your browser's localStorage.
 
 ## Credits
 

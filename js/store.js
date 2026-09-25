@@ -16,15 +16,12 @@ if (!Vue || typeof Vue.reactive !== "function") {
   throw new Error("Vue global not found. Ensure /index.html loads vue.global.prod.js before /js/app.js.");
 }
 
-// Cards that see play in decks of a color they aren't. These are
-// excluded from the deck's color-identity derivation because their
-// printed colors don't reflect how the deck actually casts them.
-//
-// Add new entries here as the need arises. The comparison is
-// case-insensitive on the card's name. See the docstring in enrich()
-// for background.
+// Cards that see play in decks of a color they aren't. These are excluded
+// from the deck's color derivation because their printed colors don't
+// reflect how the deck actually casts them. Comparison is case-insensitive
+// on the card's name. See the docstring in enrich() for background.
 const COLOR_AGNOSTIC_CARDS = new Set([
-  "sneaky snacker"      // Dimir card played via its Red madness cost in Mono-Red Madness
+  "sneaky snacker" // Dimir card played via its Red madness cost in Mono-Red Madness
 ]);
 
 export const store = Vue.reactive({
@@ -32,7 +29,11 @@ export const store = Vue.reactive({
   parsed: null,       // { mainboard, sideboard, unparsed }
   enriched: null,     // { mainboard, sideboard, stats } with card metadata attached
   matchups: [],       // ["Jund", "Tron", ...]
-  plan: {},           // plan[cardName][matchupName] = { dir, count } | null
+  // Plan storage: section-aware keys. Each entry is:
+  //   plan[cardName + "@main" | cardName + "@side"][matchupName] = { dir, count }
+  // The section suffix is what lets a card that appears in both the main
+  // and the side have independent plans for each copy.
+  plan: {},
   deckName: "",       // user-editable title card name
   deckNameWasEdited: false, // true once the user manually sets a name
   loading: false,
@@ -64,6 +65,7 @@ export async function loadDecklist(text) {
 
   store.loading = true;
   store.status = "Looking up " + names.length + " cards...";
+  store.enriched = enrich(store.parsed, new Map());
   try {
     const map = await lookupCards(names, ({ phase, done, total }) => {
       if (phase === "cache") {
@@ -79,9 +81,13 @@ export async function loadDecklist(text) {
     } else {
       store.status = "Loaded " + names.length + " cards.";
     }
-    // Ensure plan has entries for new cards.
+    // Re-key any existing plan entries from the old (name-only) format
+    // to the new section-aware format. This is a best-effort migration:
+    // if a card is in the main, the old entry becomes name@main; if in
+    // side, name@side; if both, we duplicate into both so the user can
+    // adjust. Fresh data doesn't need this.
+    migratePlanKeys();
     ensurePlanEntries(store.enriched);
-    // Auto-derive a default deck name if the user hasn't set one.
     if (!store.deckName || !store.deckNameWasEdited) {
       store.deckName = identifyDeck(store.enriched);
       store.deckNameWasEdited = false;
@@ -107,21 +113,10 @@ function enrich(parsed, map) {
   }
 
   // Deck colors: union of the *colors* field on nonland mainboard cards,
-  // EXCEPT cards on the "color agnostic" list below.
-  //
-  // `colors` is the colors from the card's actual mana cost. That's the
-  // right default for a deck's identity, but there are specific cards
-  // that see play in decks of a color they aren't: they're cast for an
-  // alternate cost (madness, cycling, evoke) that isn't the color on
-  // their card. Sneaky Snacker is the canonical example — a Dimir card
-  // (colors: U, B) that's a staple of Mono-Red Pauper Madness because
-  // its madness cost is Red.
+  // EXCEPT cards on the COLOR_AGNOSTIC_CARDS list.
   //
   // Lands are excluded too: fetches, duals, and utility lands would
   // otherwise drag in off-color identities.
-  //
-  // Fall back to color_identity if `colors` isn't present (older local
-  // DB entries may only have color_identity).
   const WUBRG = ["W", "U", "B", "R", "G"];
   const colorSet = new Set();
   for (const e of mainboard) {
@@ -137,7 +132,7 @@ function enrich(parsed, map) {
   const sortedColors = WUBRG.filter((c) => colorSet.has(c));
 
   // Mana curve: buckets 0..7+ by cmc, counting maindeck only, non-lands.
-  const curve = [0, 0, 0, 0, 0, 0, 0, 0]; // index 0..6, 7 = 7+
+  const curve = [0, 0, 0, 0, 0, 0, 0, 0];
   let nonlandCount = 0;
   let landCount = 0;
   for (const e of mainboard) {
@@ -167,11 +162,133 @@ function enrich(parsed, map) {
   };
 }
 
+/**
+ * Ensure plan has a per-section entry object for every card.
+ * Keys are cardName + "@main" or cardName + "@side".
+ */
 function ensurePlanEntries(enriched) {
-  const allCards = [...enriched.mainboard, ...enriched.sideboard];
-  for (const e of allCards) {
-    if (!store.plan[e.name]) store.plan[e.name] = {};
+  for (const e of enriched.mainboard) {
+    const key = e.name + "@main";
+    if (!store.plan[key]) store.plan[key] = {};
   }
+  for (const e of enriched.sideboard) {
+    const key = e.name + "@side";
+    if (!store.plan[key]) store.plan[key] = {};
+  }
+}
+
+/**
+ * One-shot migration: rewrite any old (name-only) plan keys into the new
+ * section-aware format. If a card exists in both sections, the old entry
+ * is duplicated into both so the user can then adjust independently.
+ *
+ * Runs on every deck load. Cheap (a few object key traversals) and
+ * idempotent — keys already ending in "@main" or "@side" are skipped.
+ */
+function migratePlanKeys() {
+  if (!store.enriched) return;
+  const inMain = new Set(store.enriched.mainboard.map((e) => e.name));
+  const inSide = new Set(store.enriched.sideboard.map((e) => e.name));
+  const oldKeys = Object.keys(store.plan).filter((k) => !/@(main|side)$/.test(k));
+  for (const oldName of oldKeys) {
+    const data = store.plan[oldName];
+    if (inMain.has(oldName)) store.plan[oldName + "@main"] = { ...data };
+    if (inSide.has(oldName)) store.plan[oldName + "@side"] = { ...data };
+    delete store.plan[oldName];
+  }
+}
+
+/**
+ * Build the storage key for a card in a given section.
+ * section is "main" or "side".
+ */
+export function planKey(cardName, section) {
+  return cardName + "@" + section;
+}
+
+/**
+ * Return copies of a card in the given section only. If section is
+ * omitted, returns the total across both sections (legacy behavior).
+ */
+export function copiesFor(cardName, section) {
+  if (!store.enriched) return 0;
+  let total = 0;
+  const visit = (list, s) => {
+    if (section && s !== section) return;
+    for (const e of list) {
+      if (e.name === cardName) total += e.count;
+    }
+  };
+  visit(store.enriched.mainboard, "main");
+  visit(store.enriched.sideboard, "side");
+  return total;
+}
+
+/**
+ * Read the current plan entry for a cell. Section is "main" or "side".
+ * Returns { dir, count } | null.
+ */
+export function getCardPlan(cardName, matchupName, section) {
+  const key = planKey(cardName, section);
+  const entry = store.plan[key] && store.plan[key][matchupName];
+  if (!entry) return null;
+  if (typeof entry === "string") {
+    // Very old format: { "in" | "out" }. We don't auto-migrate these;
+    // they only appear in ancient localStorage saves and would need
+    // manual cleanup. Return a normalized shape for display.
+    const copies = copiesFor(cardName, section) || 1;
+    return { dir: entry, count: copies };
+  }
+  return entry;
+}
+
+/**
+ * Cycle a cell. Direction is fixed by section:
+ *   main section:   null -> OUT(all) -> null
+ *   side section:   null -> IN(all)  -> null
+ */
+export function cycleCard(cardName, matchupName, section) {
+  const s = section === "side" ? "side" : "main";
+  const key = planKey(cardName, s);
+  if (!store.plan[key]) store.plan[key] = {};
+  const cur = getCardPlan(cardName, matchupName, s);
+  const copies = copiesFor(cardName, s) || 1;
+  const dir = s === "main" ? "out" : "in";
+
+  let next = null;
+  if (cur === null) next = { dir, count: copies };
+  else if (cur.dir === dir) next = null;
+  else next = { dir, count: copies };
+
+  if (next === null) delete store.plan[key][matchupName];
+  else store.plan[key][matchupName] = next;
+}
+
+/**
+ * Set an explicit plan for a cell. Pass dir=null to clear.
+ * count is clamped to 1..copies in that section.
+ * Direction is coerced to the section's valid one (main=out, side=in).
+ */
+export function setCardPlan(cardName, matchupName, dir, count, section) {
+  const s = section === "side" ? "side" : "main";
+  const key = planKey(cardName, s);
+  if (!store.plan[key]) store.plan[key] = {};
+  if (!dir) {
+    delete store.plan[key][matchupName];
+    return;
+  }
+  const correctDir = s === "main" ? "out" : "in";
+  const max = copiesFor(cardName, s) || 1;
+  const c = Math.max(1, Math.min(max, count || max));
+  store.plan[key][matchupName] = { dir: correctDir, count: c };
+}
+
+/**
+ * Backwards-compatible alias for older callers.
+ * @deprecated Use cycleCard instead.
+ */
+export function toggleCard(cardName, matchupName) {
+  cycleCard(cardName, matchupName);
 }
 
 export function addMatchup(name) {
@@ -183,7 +300,7 @@ export function addMatchup(name) {
 }
 
 /**
- * Rename a matchup, migrating all plan entries from the old name to the new one.
+ * Rename a matchup, migrating all plan entries from the old name to the new.
  */
 export function renameMatchup(oldName, newName) {
   const cased = titleCase(newName);
@@ -193,8 +310,8 @@ export function renameMatchup(oldName, newName) {
   const idx = store.matchups.indexOf(oldName);
   if (idx < 0) return;
   store.matchups.splice(idx, 1, cased);
-  for (const card of Object.keys(store.plan)) {
-    const cardPlan = store.plan[card];
+  for (const key of Object.keys(store.plan)) {
+    const cardPlan = store.plan[key];
     if (cardPlan && Object.prototype.hasOwnProperty.call(cardPlan, oldName)) {
       cardPlan[cased] = cardPlan[oldName];
       delete cardPlan[oldName];
@@ -212,115 +329,31 @@ export function setDeckName(name) {
   store.deckNameWasEdited = true;
 }
 
-/**
- * Clear the "user edited" flag so the next parse re-derives the name.
- * Internal helper; not currently called from outside this module.
- */
-function resetDeckName() {
-  store.deckNameWasEdited = false;
-}
-
 export function removeMatchup(name) {
   const i = store.matchups.indexOf(name);
   if (i >= 0) store.matchups.splice(i, 1);
-  for (const card of Object.keys(store.plan)) {
-    if (store.plan[card]) delete store.plan[card][name];
+  for (const key of Object.keys(store.plan)) {
+    if (store.plan[key]) delete store.plan[key][name];
   }
 }
 
 /**
- * Look up the deck count for a card (main + side, summed across duplicates).
- * Returns 0 if unknown.
+ * Compute the total IN / OUT counts for a matchup across all cards and
+ * sections. Returns { in: N, out: M, net: N-M }.
+ * - net = 0  : balanced (deck stays at 60)
+ * - net > 0  : deck grows (still legal, occasionally intentional)
+ * - net < 0  : deck shrinks below 60 -> ILLEGAL
  */
-export function copiesFor(cardName) {
-  if (!store.enriched) return 0;
-  let total = 0;
-  for (const e of store.enriched.mainboard) {
-    if (e.name === cardName) total += e.count;
+export function boardTotals(matchupName) {
+  let inCount = 0;
+  let outCount = 0;
+  for (const key of Object.keys(store.plan)) {
+    const entry = store.plan[key] && store.plan[key][matchupName];
+    if (!entry) continue;
+    const dir = typeof entry === "string" ? entry : entry.dir;
+    const count = typeof entry === "string" ? 0 : (entry.count || 0);
+    if (dir === "in") inCount += count;
+    else if (dir === "out") outCount += count;
   }
-  for (const e of store.enriched.sideboard) {
-    if (e.name === cardName) total += e.count;
-  }
-  return total;
+  return { in: inCount, out: outCount, net: inCount - outCount };
 }
-
-/**
- * Read the current plan entry for a cell, normalized to { dir, count } | null.
- * Internal helper used by cycleCard; not part of the module's public API.
- */
-function getCardPlan(cardName, matchupName) {
-  const entry = store.plan[cardName] && store.plan[cardName][matchupName];
-  if (!entry) return null;
-  if (typeof entry === "string") {
-    // Legacy format from earlier versions: just "in" or "out".
-    const copies = copiesFor(cardName) || 1;
-    return { dir: entry, count: copies };
-  }
-  return entry;
-}
-
-/**
- * Determine whether a card is in the maindeck (true) or sideboard (false).
- * Falls back to maindeck if unknown. Internal helper.
- */
-function isMaindeckCard(cardName) {
-  if (!store.enriched) return true;
-  for (const e of store.enriched.mainboard) {
-    if (e.name === cardName) return true;
-  }
-  return false;
-}
-
-/**
- * Cycle a cell. Direction is fixed by which half of the deck the card
- * belongs to:
- *   Maindeck card:   null -> OUT(all) -> null
- *   Sideboard card:  null -> IN(all)  -> null
- *
- * Maindeck cards are always boarded OUT (never IN), and sideboard cards are
- * always boarded IN (never OUT). The only variable is how many copies, which
- * the user sets via the popover (right-click / pencil chip).
- *
- * `section` is optional ("main" | "side"). If omitted, we look it up.
- */
-export function cycleCard(cardName, matchupName, section) {
-  if (!store.plan[cardName]) store.plan[cardName] = {};
-  const cur = getCardPlan(cardName, matchupName);
-  const copies = copiesFor(cardName) || 1;
-
-  const isMain = section === "main" ? true
-              : section === "side" ? false
-              : isMaindeckCard(cardName);
-
-  const dir = isMain ? "out" : "in";
-
-  let next = null;
-  if (cur === null) next = { dir, count: copies };
-  else if (cur.dir === dir) next = null; // second click clears
-  else next = { dir, count: copies }; // wrong dir stored? coerce to correct.
-
-  if (next === null) delete store.plan[cardName][matchupName];
-  else store.plan[cardName][matchupName] = next;
-}
-
-/**
- * Set an explicit plan for a cell. Pass dir=null to clear.
- * count is clamped to 1..copies.
- *
- * The direction is coerced to the correct one for the card's section:
- * maindeck cards can only be OUT, sideboard cards can only be IN. This
- * keeps the data model honest even if a caller passes the wrong dir.
- */
-export function setCardPlan(cardName, matchupName, dir, count) {
-  if (!store.plan[cardName]) store.plan[cardName] = {};
-  if (!dir) {
-    delete store.plan[cardName][matchupName];
-    return;
-  }
-  const isMain = isMaindeckCard(cardName);
-  const correctDir = isMain ? "out" : "in";
-  const max = copiesFor(cardName) || 1;
-  const c = Math.max(1, Math.min(max, count || max));
-  store.plan[cardName][matchupName] = { dir: correctDir, count: c };
-}
-

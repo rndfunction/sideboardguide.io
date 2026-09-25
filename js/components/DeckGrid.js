@@ -8,15 +8,11 @@
 //   | [ Bogles ]             | 4 Bolt      | OUT 4                   |
 //   | ...                    | 4 Ponder    | IN 2                    |
 //   | [+ Add matchup]        | ...                                   |
-//   |                        |                                       |
 //   |                        | Board totals: IN 4 / OUT 4 / Bal 0    |
 //   +------------------------+---------------------------------------+
 //
-// - The left list shows every matchup. Click to focus.
-// - Rename/remove affordances appear on the focused matchup.
-// - The right pane shows the selected matchup's plan for every card.
-// - Click a cell to cycle (maindeck -> OUT first, sideboard -> IN first).
-// - Right-click a cell for partial counts.
+// Plans are keyed by cardName + "@main" or cardName + "@side", so a card
+// that appears in both halves has independent plans for each copy.
 
 const TYPE_ORDER = ["Creature", "Planeswalker", "Instant", "Sorcery", "Enchantment", "Artifact", "Battle", "Land", "Other"];
 
@@ -63,7 +59,8 @@ const DeckGrid = {
       addingMatchup: false,
       renamingMatchup: null,
       renameDraft: "",
-      popover: null, // { cardName, matchup, top, left }
+      // Popover: { cardName, matchup, section, top, left }
+      popover: null,
       localName: "",
       selectedMatchup: null
     };
@@ -73,7 +70,6 @@ const DeckGrid = {
       immediate: true,
       handler(v) { this.localName = v || ""; }
     },
-    // Keep the selected matchup valid when the list changes.
     matchups: {
       immediate: true,
       handler(list) {
@@ -89,23 +85,28 @@ const DeckGrid = {
   },
   computed: {
     sections() {
-      const mainSections = this.sectionsFor(this.deck.mainboard || []);
-      const sideSections = this.sectionsFor(this.deck.sideboard || []);
+      const mainSections = this.sectionsFor(this.deck.mainboard || [], false);
+      const sideSections = this.sectionsFor(this.deck.sideboard || [], true);
       const out = [];
-      for (const s of mainSections) out.push({ ...s, isSide: false });
+      for (const s of mainSections) out.push(s);
       if (sideSections.length) {
         out.push({ bucket: "Sideboard", rows: [], isSide: true, isDivider: true });
-        for (const s of sideSections) out.push({ ...s, isSide: true });
+        for (const s of sideSections) out.push(s);
       }
       return out;
     },
     copiesByName() {
+      // Map of section-aware key -> total copies.
+      // keys are name + "@main" | name + "@side"
       const m = new Map();
-      const add = (list) => {
-        for (const e of list) m.set(e.name, (m.get(e.name) || 0) + e.count);
+      const add = (list, section) => {
+        for (const e of list) {
+          const key = e.name + "@" + section;
+          m.set(key, (m.get(key) || 0) + e.count);
+        }
       };
-      add(this.deck.mainboard || []);
-      add(this.deck.sideboard || []);
+      add(this.deck.mainboard || [], "main");
+      add(this.deck.sideboard || [], "side");
       return m;
     },
     activeMatchup() {
@@ -124,7 +125,7 @@ const DeckGrid = {
     document.removeEventListener("keydown", this.onDocumentKey);
   },
   methods: {
-    sectionsFor(list) {
+    sectionsFor(list, isSide) {
       const byName = new Map();
       for (const e of list) {
         if (!byName.has(e.name)) {
@@ -151,7 +152,7 @@ const DeckGrid = {
       let current = null;
       for (const r of rows) {
         if (!current || current.bucket !== r.bucket) {
-          current = { bucket: r.bucket, rows: [] };
+          current = { bucket: r.bucket, rows: [], isSide };
           sections.push(current);
         }
         current.rows.push(r);
@@ -179,31 +180,33 @@ const DeckGrid = {
       const letter = s.match(/[WUBRGC]/i);
       return letter ? letter[0].toUpperCase() : s[0];
     },
-    copiesFor(cardName) {
-      return this.copiesByName.get(cardName) || 1;
+    copiesFor(cardName, section) {
+      const key = cardName + "@" + section;
+      return this.copiesByName.get(key) || 1;
     },
     isMaindeck(cardName) {
       for (const e of this.deck.mainboard || []) if (e.name === cardName) return true;
       return false;
     },
 
-    entryFor(cardName, matchup) {
-      const cardPlan = this.plan[cardName];
+    entryFor(cardName, matchup, section) {
+      const key = cardName + "@" + section;
+      const cardPlan = this.plan[key];
       if (!cardPlan) return null;
       const entry = cardPlan[matchup];
       if (!entry) return null;
-      if (typeof entry === "string") return { dir: entry, count: this.copiesFor(cardName) };
+      if (typeof entry === "string") return { dir: entry, count: this.copiesFor(cardName, section) };
       return entry;
     },
-    cellLabel(cardName, matchup) {
-      const e = this.entryFor(cardName, matchup);
+    cellLabel(cardName, matchup, section) {
+      const e = this.entryFor(cardName, matchup, section);
       if (!e) return "";
       const dir = e.dir === "in" ? "IN" : "OUT";
       return dir + " " + e.count;
     },
-    cellClass(cardName, matchup) {
-      const e = this.entryFor(cardName, matchup);
-      const full = this.copiesFor(cardName);
+    cellClass(cardName, matchup, section) {
+      const e = this.entryFor(cardName, matchup, section);
+      const full = this.copiesFor(cardName, section);
       const partial = e && e.count < full;
       return {
         "state-in": e && e.dir === "in",
@@ -211,27 +214,26 @@ const DeckGrid = {
         partial: !!partial
       };
     },
-    onCellClick(cardName, evt) {
+    onCellClick(cardName, section, evt) {
       const matchup = this.activeMatchup;
       if (!matchup) return;
-      if (this.popover && this.popover.cardName === cardName && this.popover.matchup === matchup) return;
+      if (this.popover && this.popover.cardName === cardName && this.popover.matchup === matchup && this.popover.section === section) return;
       this.closePopover();
-      const section = this.isMaindeck(cardName) ? "main" : "side";
       this.$emit("toggle-card", cardName, matchup, section);
     },
-    onCellContext(cardName, evt) {
+    onCellContext(cardName, section, evt) {
       const matchup = this.activeMatchup;
       if (!matchup) return;
       evt.preventDefault();
       evt.stopPropagation();
-      this.openPopover(cardName, matchup, evt.currentTarget);
+      this.openPopover(cardName, matchup, section, evt.currentTarget);
     },
-    onEditChip(cardName, evt) {
+    onEditChip(cardName, section, evt) {
       const matchup = this.activeMatchup;
       if (!matchup) return;
       evt.preventDefault();
       evt.stopPropagation();
-      this.openPopover(cardName, matchup, evt.currentTarget.closest(".toggle-cell"));
+      this.openPopover(cardName, matchup, section, evt.currentTarget.closest(".toggle-cell"));
     },
 
     // --- Matchup selection ---
@@ -293,7 +295,7 @@ const DeckGrid = {
     },
 
     // --- Popover ---
-    openPopover(cardName, matchup, cellEl) {
+    openPopover(cardName, matchup, section, cellEl) {
       if (!cellEl) return;
       const rect = cellEl.getBoundingClientRect();
       const popW = 200;
@@ -304,23 +306,23 @@ const DeckGrid = {
       if (rect.bottom + popH > viewH - 10) top = rect.top + window.scrollY - popH - 4;
       let left = rect.left + window.scrollX;
       if (left + popW > viewW - 10) left = Math.max(4, viewW - popW - 10);
-      this.popover = { cardName, matchup, top, left };
+      this.popover = { cardName, matchup, section, top, left };
     },
     closePopover() {
       this.popover = null;
     },
     onPopoverPick(dir, count) {
       if (!this.popover) return;
-      this.$emit("set-card-plan", this.popover.cardName, this.popover.matchup, dir, count);
+      this.$emit("set-card-plan", this.popover.cardName, this.popover.matchup, dir, count, this.popover.section);
       this.closePopover();
     },
     popoverIsMain() {
       if (!this.popover) return true;
-      return this.isMaindeck(this.popover.cardName);
+      return this.popover.section === "main";
     },
     onPopoverClear() {
       if (!this.popover) return;
-      this.$emit("set-card-plan", this.popover.cardName, this.popover.matchup, null, 0);
+      this.$emit("set-card-plan", this.popover.cardName, this.popover.matchup, null, 0, this.popover.section);
       this.closePopover();
     },
     onDocumentClick(evt) {
@@ -337,19 +339,6 @@ const DeckGrid = {
       }
     },
 
-    // --- Card hover preview ---
-    onCardHover(row, evt) {
-      if (!row.card) return;
-      store.hoveredCard = row.card;
-      this.onCardHoverMove(evt);
-    },
-    onCardHoverMove(evt) {
-      store.hoveredCardPos = { x: evt.clientX, y: evt.clientY };
-    },
-    onCardHoverEnd() {
-      store.hoveredCard = null;
-    },
-
     // --- Deck name ---
     onNameInput(v) {
       this.localName = v;
@@ -359,34 +348,54 @@ const DeckGrid = {
       this.$emit("update:deck-name", v);
     },
 
+    // --- Board totals (sums across both sections) ---
     inTotal(matchup) {
       if (!matchup) return 0;
       let total = 0;
-      const visit = (list) => {
+      const visit = (list, section) => {
         for (const e of list) {
-          const entry = this.entryFor(e.name, matchup);
+          const entry = this.entryFor(e.name, matchup, section);
           if (entry && entry.dir === "in") total += entry.count;
         }
       };
-      visit(this.deck.mainboard || []);
-      visit(this.deck.sideboard || []);
+      visit(this.deck.mainboard || [], "main");
+      visit(this.deck.sideboard || [], "side");
       return total;
     },
     outTotal(matchup) {
       if (!matchup) return 0;
       let total = 0;
-      const visit = (list) => {
+      const visit = (list, section) => {
         for (const e of list) {
-          const entry = this.entryFor(e.name, matchup);
+          const entry = this.entryFor(e.name, matchup, section);
           if (entry && entry.dir === "out") total += entry.count;
         }
       };
-      visit(this.deck.mainboard || []);
-      visit(this.deck.sideboard || []);
+      visit(this.deck.mainboard || [], "main");
+      visit(this.deck.sideboard || [], "side");
       return total;
     },
     balanceFor(matchup) {
+      // IN - OUT.
+      //  0 = balanced
+      //  > 0 = deck grows (legal)
+      //  < 0 = deck shrinks below 60 (ILLEGAL)
       return this.inTotal(matchup) - this.outTotal(matchup);
+    },
+    /**
+     * Return "ok" | "warn" | "bad" for the current matchup's net.
+     */
+    balanceState(matchup) {
+      const net = this.balanceFor(matchup);
+      if (net === 0) return "ok";
+      if (net > 0) return "warn";
+      return "bad";
+    },
+    balanceLabel(matchup) {
+      const net = this.balanceFor(matchup);
+      if (net === 0) return "balanced";
+      if (net > 0) return "deck grows by " + net;
+      return "deck shrinks by " + Math.abs(net);
     }
   },
   template: `
@@ -467,15 +476,14 @@ const DeckGrid = {
             <span class="matchup-focus-name">{{ activeMatchup }}</span>
             <span
               class="matchup-focus-balance"
-              :class="{ 'net-ok': balanceFor(activeMatchup) === 0, 'net-bad': balanceFor(activeMatchup) !== 0 }"
+              :class="{
+                'net-ok': balanceState(activeMatchup) === 'ok',
+                'net-warn': balanceState(activeMatchup) === 'warn',
+                'net-bad': balanceState(activeMatchup) === 'bad'
+              }"
             >
               IN {{ inTotal(activeMatchup) }} &middot; OUT {{ outTotal(activeMatchup) }}
-              <template v-if="balanceFor(activeMatchup) !== 0">
-                &middot; off by {{ balanceFor(activeMatchup) > 0 ? '+' + balanceFor(activeMatchup) : balanceFor(activeMatchup) }}
-              </template>
-              <template v-else>
-                &middot; balanced
-              </template>
+              &middot; {{ balanceLabel(activeMatchup) }}
             </span>
           </template>
           <template v-else>
@@ -504,23 +512,6 @@ const DeckGrid = {
                 </tr>
                 <tr v-for="row in section.rows" :key="'r-' + si + '-' + row.name">
                   <th class="card-col">
-                    <button
-                      v-if="row.card"
-                      type="button"
-                      class="card-preview-icon"
-                      :title="'Preview ' + row.name"
-                      :aria-label="'Preview ' + row.name"
-                      @mouseenter="onCardHover(row, $event)"
-                      @mousemove="onCardHoverMove($event)"
-                      @mouseleave="onCardHoverEnd"
-                      @click.stop
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                      </svg>
-                    </button>
                     <span class="card-count-badge">{{ row.count }}</span>{{ row.name }}
                     <span class="mana-cost" v-if="row.card && row.card.mana_cost">
                       <span
@@ -533,17 +524,17 @@ const DeckGrid = {
                   </th>
                   <td
                     class="toggle-cell"
-                    :class="activeMatchup ? cellClass(row.name, activeMatchup) : 'toggle-cell-idle'"
-                    @click="activeMatchup && onCellClick(row.name, $event)"
-                    @contextmenu="activeMatchup && onCellContext(row.name, $event)"
+                    :class="activeMatchup ? cellClass(row.name, activeMatchup, section.isSide ? 'side' : 'main') : 'toggle-cell-idle'"
+                    @click="activeMatchup && onCellClick(row.name, section.isSide ? 'side' : 'main', $event)"
+                    @contextmenu="activeMatchup && onCellContext(row.name, section.isSide ? 'side' : 'main', $event)"
                     :title="activeMatchup ? 'Left-click to cycle. Right-click for partial counts.' : 'Add a matchup above to plan this card.'"
                   >
                     <template v-if="activeMatchup">
-                      <span>{{ cellLabel(row.name, activeMatchup) }}</span>
+                      <span>{{ cellLabel(row.name, activeMatchup, section.isSide ? 'side' : 'main') }}</span>
                       <span
-                        v-if="entryFor(row.name, activeMatchup)"
+                        v-if="entryFor(row.name, activeMatchup, section.isSide ? 'side' : 'main')"
                         class="edit-hint"
-                        @click="onEditChip(row.name, $event)"
+                        @click="onEditChip(row.name, section.isSide ? 'side' : 'main', $event)"
                         title="Edit partial count"
                       >&#9998;</span>
                     </template>
@@ -565,26 +556,26 @@ const DeckGrid = {
         :style="{ top: popover.top + 'px', left: popover.left + 'px', position: 'absolute' }"
         @click.stop
       >
-        <h5>{{ popover.cardName }} &middot; {{ popover.matchup }}</h5>
+        <h5>{{ popover.cardName }} <span class="plan-popover-section">({{ popover.section === 'side' ? 'sideboard' : 'maindeck' }})</span> &middot; {{ popover.matchup }}</h5>
         <div v-if="!popoverIsMain" class="plan-popover-row">
           <span class="plan-popover-label">IN</span>
           <button
-            v-for="n in copiesFor(popover.cardName)"
+            v-for="n in copiesFor(popover.cardName, popover.section)"
             :key="'in-' + n"
             type="button"
             class="plan-popover-btn"
-            :class="{ 'active-in': entryFor(popover.cardName, popover.matchup) && entryFor(popover.cardName, popover.matchup).dir === 'in' && entryFor(popover.cardName, popover.matchup).count === n }"
+            :class="{ 'active-in': entryFor(popover.cardName, popover.matchup, popover.section) && entryFor(popover.cardName, popover.matchup, popover.section).dir === 'in' && entryFor(popover.cardName, popover.matchup, popover.section).count === n }"
             @click="onPopoverPick('in', n)"
           >{{ n }}</button>
         </div>
         <div v-if="popoverIsMain" class="plan-popover-row">
           <span class="plan-popover-label">OUT</span>
           <button
-            v-for="n in copiesFor(popover.cardName)"
+            v-for="n in copiesFor(popover.cardName, popover.section)"
             :key="'out-' + n"
             type="button"
             class="plan-popover-btn"
-            :class="{ 'active-out': entryFor(popover.cardName, popover.matchup) && entryFor(popover.cardName, popover.matchup).dir === 'out' && entryFor(popover.cardName, popover.matchup).count === n }"
+            :class="{ 'active-out': entryFor(popover.cardName, popover.matchup, popover.section) && entryFor(popover.cardName, popover.matchup, popover.section).dir === 'out' && entryFor(popover.cardName, popover.matchup, popover.section).count === n }"
             @click="onPopoverPick('out', n)"
           >{{ n }}</button>
         </div>

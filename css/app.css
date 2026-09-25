@@ -1157,6 +1157,14 @@ table.guide-table tr.section-row td {
     box-shadow: none;
     page-break-inside: avoid;
     break-inside: avoid;
+    /* Force the browser to render the card's actual background colors,
+       gradients, and images. Without this, browsers strip backgrounds
+       for ink savings — which would erase the user's custom title card
+       color, texture, and mana symbol watermark. The user chose those;
+       they should print exactly as designed. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-adjust: exact;
   }
 }
 
@@ -1354,7 +1362,16 @@ table.guide-table tr.section-row td {
 }
 
 .matchup-focus-balance.net-ok { color: #7ac886; }
+.matchup-focus-balance.net-warn { color: #e6c96a; }
 .matchup-focus-balance.net-bad { color: #f4828c; font-weight: 700; }
+
+/* Popover heading: differentiate main vs side when a card is in both. */
+.plan-popover-section {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--site-text-muted);
+  text-transform: lowercase;
+}
 
 .matchup-focus-empty {
   padding: 2rem 1rem;
