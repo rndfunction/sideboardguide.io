@@ -84,42 +84,28 @@ const app = Vue.createApp({
     onRenameMatchup(oldName, newName) { renameMatchup(oldName, newName); },
     onToggleCard(cardName, matchup, section) { cycleCard(cardName, matchup, section); },
     onSetCardPlan(cardName, matchup, dir, count, section) { setCardPlan(cardName, matchup, dir, count, section); },
-    async onLoadState(saved) {
-      if (saved.rawText) {
-        await loadDecklist(saved.rawText);
-      }
-      if (Array.isArray(saved.matchups)) {
-        store.matchups = saved.matchups.slice();
-      }
-      if (saved.plan && typeof saved.plan === "object") {
-        store.plan = JSON.parse(JSON.stringify(saved.plan));
-      }
-      if (saved.deckName) {
-        store.deckName = saved.deckName;
-      }
-    },
+
     async onImportShare(parsed) {
       // The share schema nests the decklist under `deck.rawText`.
-      // Reuse onLoadState for the core state, then handle share-only bits.
       const share = parsed || {};
       const deck = share.deck || {};
-      await this.onLoadState({
-        rawText: deck.rawText,
-        matchups: share.matchups,
-        plan: share.plan,
-        deckName: deck.name
-      });
-      // Persist the loaded guide locally so subsequent reloads keep it.
-      try {
-        const { saveGuide } = await import("./persistence.js");
-        saveGuide({
-          rawText: deck.rawText || store.rawText,
-          matchups: store.matchups,
-          plan: store.plan,
-          deckName: store.deckName,
-          format: deck.format || null
-        });
-      } catch (_) { /* noop */ }
+
+      // Parse + look up the decklist (async; hits Scryfall or the local DB).
+      if (deck.rawText) {
+        await loadDecklist(deck.rawText);
+      }
+      if (Array.isArray(share.matchups)) {
+        store.matchups = share.matchups.slice();
+      }
+      if (share.plan && typeof share.plan === "object") {
+        store.plan = JSON.parse(JSON.stringify(share.plan));
+      }
+      if (deck.name) {
+        store.deckName = deck.name;
+        // Mark the name as user-set so auto-naming doesn't overwrite it
+        // on subsequent loads within this session.
+        store.deckNameWasEdited = true;
+      }
     },
     onDeckNameChange(name) {
       setDeckName(name);
@@ -158,11 +144,38 @@ const app = Vue.createApp({
       this.submitStatusClass = cls || "ok";
       setTimeout(() => { this.submitStatus = ""; }, 4000);
     },
+    /**
+     * Count total IN/OUT plan entries across every matchup and section.
+     * A plan entry is any non-empty cell in the guide.
+     */
+    planEntryCount() {
+      let count = 0;
+      for (const key of Object.keys(store.plan)) {
+        const cardPlan = store.plan[key];
+        if (!cardPlan) continue;
+        for (const matchup of Object.keys(cardPlan)) {
+          if (cardPlan[matchup]) count++;
+        }
+      }
+      return count;
+    },
     async onSubmitGuide() {
       if (!store.enriched) {
         this.flashSubmit("Load a decklist first to submit a guide.", "error");
         return;
       }
+      // Gate 1: at least one matchup.
+      if (!store.matchups || store.matchups.length === 0) {
+        this.flashSubmit("Add at least one matchup before submitting a guide.", "error");
+        return;
+      }
+      // Gate 2: at least one plan entry (a filled IN/OUT cell anywhere).
+      const planCount = this.planEntryCount();
+      if (planCount === 0) {
+        this.flashSubmit("Fill in at least one IN or OUT plan before submitting.", "error");
+        return;
+      }
+
       const payload = buildSharePayload({
         deckName: store.deckName,
         format: this.selectedFormat,
@@ -174,9 +187,6 @@ const app = Vue.createApp({
       const filename = suggestFilename(store.deckName);
       const token = getStoredToken();
       if (!token) {
-        // Need to auth first; stash the payload and open the dialog.
-        // We'll build the meta (including the author handle) once we have
-        // a token and can look up the authenticated user.
         this._pendingSubmit = { payload, filename };
         this.showAuthDialog = true;
         return;

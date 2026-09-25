@@ -200,9 +200,9 @@ function migratePlanKeys() {
 
 /**
  * Build the storage key for a card in a given section.
- * section is "main" or "side".
+ * section is "main" or "side". Internal helper.
  */
-export function planKey(cardName, section) {
+function planKey(cardName, section) {
   return cardName + "@" + section;
 }
 
@@ -226,9 +226,9 @@ export function copiesFor(cardName, section) {
 
 /**
  * Read the current plan entry for a cell. Section is "main" or "side".
- * Returns { dir, count } | null.
+ * Returns { dir, count } | null. Internal helper used by cycleCard.
  */
-export function getCardPlan(cardName, matchupName, section) {
+function getCardPlan(cardName, matchupName, section) {
   const key = planKey(cardName, section);
   const entry = store.plan[key] && store.plan[key][matchupName];
   if (!entry) return null;
@@ -283,14 +283,6 @@ export function setCardPlan(cardName, matchupName, dir, count, section) {
   store.plan[key][matchupName] = { dir: correctDir, count: c };
 }
 
-/**
- * Backwards-compatible alias for older callers.
- * @deprecated Use cycleCard instead.
- */
-export function toggleCard(cardName, matchupName) {
-  cycleCard(cardName, matchupName);
-}
-
 export function addMatchup(name) {
   const trimmed = (name || "").trim();
   if (!trimmed) return;
@@ -337,23 +329,3 @@ export function removeMatchup(name) {
   }
 }
 
-/**
- * Compute the total IN / OUT counts for a matchup across all cards and
- * sections. Returns { in: N, out: M, net: N-M }.
- * - net = 0  : balanced (deck stays at 60)
- * - net > 0  : deck grows (still legal, occasionally intentional)
- * - net < 0  : deck shrinks below 60 -> ILLEGAL
- */
-export function boardTotals(matchupName) {
-  let inCount = 0;
-  let outCount = 0;
-  for (const key of Object.keys(store.plan)) {
-    const entry = store.plan[key] && store.plan[key][matchupName];
-    if (!entry) continue;
-    const dir = typeof entry === "string" ? entry : entry.dir;
-    const count = typeof entry === "string" ? 0 : (entry.count || 0);
-    if (dir === "in") inCount += count;
-    else if (dir === "out") outCount += count;
-  }
-  return { in: inCount, out: outCount, net: inCount - outCount };
-}

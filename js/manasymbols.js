@@ -36,9 +36,9 @@ const SCRYFALL_BASE = "https://svgs.scryfall.io/card-symbols/";
 
 /**
  * Return the Scryfall CDN URL for a symbol letter, or null if we don't
- * have a URL for it.
+ * have a URL for it. Internal helper.
  */
-export function scryfallSymbolUrl(letter) {
+function scryfallSymbolUrl(letter) {
   if (!letter) return null;
   const key = String(letter).toUpperCase();
   if (!/^[WUBRG]$/.test(key)) return null;
@@ -46,9 +46,9 @@ export function scryfallSymbolUrl(letter) {
 }
 
 /**
- * Return an inline data URI for a symbol letter, or null.
+ * Return an inline data URI for a symbol letter, or null. Internal helper.
  */
-export function inlineSymbolDataUri(letter) {
+function inlineSymbolDataUri(letter) {
   if (!letter) return null;
   const key = String(letter).toUpperCase();
   return INLINE_SYMBOLS[key] || null;

@@ -1,6 +1,6 @@
-// GuideLibrary: a full-page browse view of community guides. Rendered
-// when the app is in "browse" mode. Click a guide to load it into the
-// builder and switch back to "build" mode.
+// GuideLibrary: a full-page browse view of community guides.
+// Card-showroom styling (Direction A): format tabs at the top, colored
+// format pills on cards, arrow-chip buttons, prominent empty states.
 
 import { listGuides, loadGuide } from "../guides.js";
 
@@ -14,7 +14,8 @@ const GuideLibrary = {
       source: null,
       loadingFile: null,
       filterFormat: "all",
-      filterText: ""
+      filterText: "",
+      sourceOpen: false
     };
   },
   mounted() {
@@ -22,8 +23,17 @@ const GuideLibrary = {
   },
   computed: {
     formats() {
-      const set = new Set(this.guides.map((g) => g.format).filter(Boolean));
-      return ["all", ...Array.from(set).sort()];
+      // Formats present in the guide list, with counts. Ordered by count
+      // descending so the most-represented format is first.
+      const counts = new Map();
+      for (const g of this.guides) {
+        if (!g.format) continue;
+        counts.set(g.format, (counts.get(g.format) || 0) + 1);
+      }
+      const list = Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([name, count]) => ({ name, count }));
+      return [{ name: "all", count: this.guides.length }, ...list];
     },
     filtered() {
       const q = this.filterText.trim().toLowerCase();
@@ -34,10 +44,13 @@ const GuideLibrary = {
         return hay.includes(q);
       });
     },
+    hasFilters() {
+      return this.filterFormat !== "all" || this.filterText.trim().length > 0;
+    },
     sourceLabel() {
       if (this.source === "remote") return "Loaded from github.com/rndfunction/SideboardGuides";
       if (this.source === "local") return "Loaded from the app's local mirror (remote unavailable here)";
-      if (this.source === "fallback") return "Showing built-in sample guides (remote and local fetches unavailable)";
+      if (this.source === "fallback") return "Showing built-in sample guides";
       return "";
     }
   },
@@ -49,9 +62,6 @@ const GuideLibrary = {
         const result = await listGuides();
         this.guides = result.guides || [];
         this.source = result.source;
-        if (!this.guides.length) {
-          this.error = "No community guides found yet.";
-        }
       } catch (err) {
         this.error = "Could not load guides: " + String(err.message || err);
       } finally {
@@ -73,6 +83,17 @@ const GuideLibrary = {
       } finally {
         this.loadingFile = null;
       }
+    },
+    clearFilters() {
+      this.filterFormat = "all";
+      this.filterText = "";
+    },
+    formatClass(fmt) {
+      if (!fmt) return "pill-other";
+      return "pill-" + String(fmt).toLowerCase().replace(/[^a-z]/g, "");
+    },
+    toggleSource() {
+      this.sourceOpen = !this.sourceOpen;
     }
   },
   template: `
@@ -80,9 +101,10 @@ const GuideLibrary = {
       <header class="guide-library-header">
         <div class="guide-library-header-row">
           <div>
-            <h2>Community guides</h2>
+            <p class="guide-library-eyebrow">Community</p>
+            <h2>Sideboard guides</h2>
             <p class="guide-library-lead">
-              Sideboard guides shared by other players. Click a guide to open it in the builder.
+              Shared by other players. Click any guide to open it in the builder.
             </p>
           </div>
           <button
@@ -94,53 +116,100 @@ const GuideLibrary = {
         </div>
       </header>
 
-      <div class="guide-library-controls">
-        <label class="guide-library-filter">
-          <span class="usa-sr-only">Filter by format</span>
-          <select v-model="filterFormat">
-            <option v-for="f in formats" :key="f" :value="f">{{ f === "all" ? "All formats" : f }}</option>
-          </select>
-        </label>
+      <nav class="guide-library-tabs" role="tablist" aria-label="Filter by format">
+        <button
+          v-for="f in formats"
+          :key="f.name"
+          type="button"
+          role="tab"
+          :aria-selected="filterFormat === f.name ? 'true' : 'false'"
+          class="guide-library-tab"
+          :class="{ 'is-active': filterFormat === f.name }"
+          @click="filterFormat = f.name"
+        >
+          {{ f.name === "all" ? "All" : f.name }}
+          <span class="guide-library-tab-count">{{ f.count }}</span>
+        </button>
+
         <label class="guide-library-search">
-          <span class="usa-sr-only">Search</span>
+          <span class="usa-sr-only">Search guides</span>
           <input
             type="search"
             v-model="filterText"
             placeholder="Search by name, archetype, or author"
           />
         </label>
-        <span class="guide-library-source">{{ sourceLabel }}</span>
+
+        <button
+          v-if="sourceLabel"
+          type="button"
+          class="guide-library-info"
+          :aria-expanded="sourceOpen ? 'true' : 'false'"
+          title="Where these guides are loaded from"
+          @click="toggleSource"
+        >i</button>
+      </nav>
+
+      <div v-if="sourceOpen && sourceLabel" class="guide-library-source-inline">
+        {{ sourceLabel }}
       </div>
 
-      <div v-if="loading" class="guide-library-status">Loading guides...</div>
-      <div v-else-if="error" class="guide-library-status guide-library-error">{{ error }}</div>
-      <div v-else-if="!filtered.length" class="guide-library-status">No guides match your filter.</div>
+      <div v-if="loading" class="guide-library-status">
+        <div class="guide-library-spinner" aria-hidden="true"></div>
+        <p>Loading guides...</p>
+      </div>
+
+      <div v-else-if="error" class="guide-library-status guide-library-error">
+        <p>{{ error }}</p>
+        <button type="button" class="usa-button usa-button--outline" @click="refresh">Try again</button>
+      </div>
+
+      <div v-else-if="!filtered.length" class="guide-library-status">
+        <p>No guides match your filter.</p>
+        <button
+          v-if="hasFilters"
+          type="button"
+          class="usa-button usa-button--outline"
+          @click="clearFilters"
+        >Clear filters</button>
+      </div>
 
       <ul v-else class="guide-library-grid">
         <li v-for="g in filtered" :key="g.file" class="guide-library-card">
           <div class="guide-library-card-body">
             <h3 class="guide-library-card-name">{{ g.deckName || g.file }}</h3>
             <div class="guide-library-card-meta">
-              <span v-if="g.format" class="guide-library-tag">{{ g.format }}</span>
-              <span v-if="g.archetype" class="guide-library-archetype">{{ g.archetype }}</span>
+              <span
+                v-if="g.format"
+                class="guide-library-pill"
+                :class="formatClass(g.format)"
+              >{{ g.format }}</span>
+              <span v-if="g.archetype && g.archetype !== g.deckName" class="guide-library-archetype">{{ g.archetype }}</span>
             </div>
-            <p v-if="g.author" class="guide-library-card-author">by {{ g.author }}</p>
+            <p v-if="g.author" class="guide-library-card-author">
+              <span class="guide-library-by">by</span> {{ g.author }}
+            </p>
           </div>
           <button
             type="button"
-            class="usa-button guide-library-open"
+            class="guide-library-open"
             :disabled="loadingFile === g.file"
             @click="onOpen(g.file)"
-          >{{ loadingFile === g.file ? "Opening..." : "Open in builder" }}</button>
+            :aria-label="'Open ' + (g.deckName || g.file) + ' in the builder'"
+          >
+            <span>{{ loadingFile === g.file ? "Opening..." : "Open" }}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
         </li>
       </ul>
 
       <footer class="guide-library-footer">
         <span>
-          Want to share your own? Build a guide in <strong>Build</strong> mode and click
-          <strong>Submit</strong> — it opens a pull request in the community repository.
-          You can also contribute directly at
-          <a href="https://github.com/rndfunction/SideboardGuides" target="_blank" rel="noopener">github.com/rndfunction/SideboardGuides</a>.
+          Share your own from <strong>Build</strong> mode &mdash; the guide builder has a
+          <strong>Submit</strong> button that opens a pull request in the community repository.
         </span>
       </footer>
     </section>

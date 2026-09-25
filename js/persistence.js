@@ -7,7 +7,7 @@ const FORMAT_KEY = "mtg-deck-guide:format";
 // Presets are curated, ordered lists of common matchups per format.
 // At runtime, these are refreshed from /presets.json by loadPresets().
 // If that fetch fails, we keep whatever's here as the built-in fallback.
-export let PRESET_MATCHUPS = {
+let PRESET_MATCHUPS = {
   Pauper: [
     "Mono-Red Burn",
     "Mono-Blue Terror",
@@ -168,7 +168,7 @@ export function titleCase(input) {
   return out.join(" ");
 }
 
-export function saveGuide(state) {
+function saveGuide(state) {
   const payload = {
     version: 1,
     savedAt: Date.now(),
@@ -186,7 +186,7 @@ export function saveGuide(state) {
   }
 }
 
-export function loadGuide() {
+function loadGuide() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
@@ -198,7 +198,7 @@ export function loadGuide() {
   }
 }
 
-export function clearSaved() {
+function clearSaved() {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
 }
 
@@ -220,8 +220,8 @@ export function clearSaved() {
 //   "titleCard": { "color": "#hex", "fontKey": "...", "symbol": "...", "texture": "...", "intensity": "..." }
 // }
 
-export const SHARE_FORMAT = "mtg-sideboard-guide";
-export const SHARE_VERSION = 1;
+const SHARE_FORMAT = "mtg-sideboard-guide";
+const SHARE_VERSION = 1;
 
 /**
  * Build the share payload object from current app state.

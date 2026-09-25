@@ -176,17 +176,6 @@ export async function loadGuide(file) {
   throw new Error("Guide not found: " + file);
 }
 
-/**
- * Build a GitHub URL that opens the "new file" editor pre-filled with
- * the given JSON payload, targeting the SideboardGuides repo.
- */
-export function guideSubmissionUrl(payload, suggestedFilename) {
-  const filename = suggestedFilename || "new-guide.json";
-  const json = JSON.stringify(payload, null, 2);
-  const base = "https://github.com/rndfunction/SideboardGuides/new/main/guides";
-  return base + "?filename=" + encodeURIComponent(filename) + "&value=" + encodeURIComponent(json);
-}
-
 // -----------------------------------------------------------------------
 // Submit a guide to the community repository via GitHub's
 // repository_dispatch API. A GitHub Action in the guides repo handles
