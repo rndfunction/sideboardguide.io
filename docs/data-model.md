@@ -204,11 +204,29 @@ distinct builds). The reasons:
 These are not decided and should be revisited when there is enough data to
 make the answer obvious:
 
-- **Tag vocabulary.** Canonicalized on ingest today (lowercase, trim, common
-  variants mapped). A dropdown-with-other could replace free text later.
-- **`verified` criteria.** Staff judgment for now. A written rubric would
-  help contributors understand what earns it.
-- **Overlap thresholds.** 0.9 / 0.7 are initial guesses. They should be
-  revisited once there are dozens of guides per archetype to test against.
-- **History of edits.** `GUIDE_CHANGES.md` is the lightest possible audit.
-  If abuse becomes a problem, this is the first thing to expand.
+- **The archetype index producer.** `archetypes.json` is specified in
+  `docs/archetype-index-spec.md` and has a reference Python implementation,
+  but it is not yet wired into the guides repository's GitHub Action. Until
+  it is, the Browse view runs on a hand-computed fixture
+  (`guides/archetypes.demo.json`). Wiring the producer is the next
+  server-side milestone; see that spec for the contract.
+- **Overlap thresholds.** 0.8 for "core", 0.9 / 0.7 for UI clustering. All
+  three are initial guesses. They should be revisited once there are dozens
+  of guides per archetype to test against.
+- **Sideboard OUT analysis.** The index's `boardInMatrix` covers cards
+  brought IN per matchup. The OUT side (what is cut) is not aggregated, on
+  the view that "card X is boarded in here" is more actionable as aggregate
+  data than "card Y is cut here." Worth revisiting if readers ask for it.
+- **Mana curve.** An aggregate curve per archetype would be interesting but
+  requires the index to carry per-card mana value, which is a card-metadata
+  dependency the current index avoids. Deferred.
+
+Resolved since this document was first written:
+
+- **Tag vocabulary.** Canonicalized on ingest (lowercase, trim). Good enough
+  at current scale; the manifest carries tags directly.
+- **`verified` criteria.** Staff judgment, applied to a small subset rather
+  than every submission. Documented in `schema-rationale.md`.
+- **History of edits.** No version history by decision. `git revert` is the
+  recovery path and an optional `GUIDE_CHANGES.md` is the audit path. See
+  "Edit, don't version" above.

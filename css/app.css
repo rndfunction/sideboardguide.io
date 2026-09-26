@@ -2780,3 +2780,467 @@ th.card-col:hover .card-preview-icon,
   color: #f4828c;
   margin-left: 0.5rem;
 }
+
+/* ============================================================
+   Archetype view (derived index) + By-archetype / All-guides
+   toggle above the Guide library. See /docs/archetype-index-spec.md
+   ============================================================ */
+
+.guide-library-view-toggle {
+  display: flex;
+  gap: 0.4rem;
+  margin: 1rem 0 1.25rem;
+}
+
+.guide-library-view-btn {
+  background: var(--site-surface);
+  color: var(--site-text-muted);
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.guide-library-view-btn:hover:not(:disabled) {
+  background: var(--site-surface-alt);
+  color: var(--site-text);
+}
+
+.guide-library-view-btn.is-active {
+  background: var(--site-accent);
+  color: #1a1a1a;
+  border-color: var(--site-accent);
+}
+
+.guide-library-view-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.guide-library-view-btn:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 1px;
+}
+
+/* --- Archetype view root --- */
+
+.archetype-view {
+  margin-top: 0.5rem;
+}
+
+.archetype-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.archetype-view-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: var(--site-accent);
+  margin: 0 0 0.15rem;
+}
+
+.archetype-view-header h2 {
+  margin: 0;
+  color: var(--site-text);
+  font-size: 1.5rem;
+}
+
+.archetype-view-lead {
+  margin: 0.25rem 0 0;
+  color: var(--site-text-muted);
+  font-size: 0.9rem;
+}
+
+.archetype-view-source {
+  font-size: 0.75rem;
+  color: var(--site-text-muted);
+  white-space: nowrap;
+  padding-top: 0.35rem;
+}
+
+/* --- Archetype list --- */
+
+.archetype-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.archetype-item {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.archetype-item.is-expanded {
+  border-color: var(--site-accent);
+}
+
+.archetype-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.85rem 1.1rem;
+  background: transparent;
+  border: none;
+  color: var(--site-text);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.archetype-row:hover {
+  background: var(--site-surface-alt);
+}
+
+.archetype-row:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: -2px;
+}
+
+.archetype-row-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.archetype-row-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.archetype-row-format {
+  font-size: 0.75rem;
+  color: var(--site-text-muted);
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+}
+
+.archetype-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+}
+
+.archetype-row-count {
+  font-size: 0.82rem;
+  color: var(--site-text-muted);
+}
+
+.archetype-row-chevron {
+  color: var(--site-accent);
+  font-size: 0.9rem;
+}
+
+/* --- Archetype detail --- */
+
+.archetype-detail {
+  padding: 0 1.1rem 1.1rem;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+/* Two-column detail: maindeck frequency on the left, board-in matrix
+   on the right, guides as a full-width footer below. Collapses to a
+   single stack when the viewport is too narrow for side-by-side. */
+.archetype-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .archetype-columns {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.archetype-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+}
+
+.archetype-tag {
+  font-size: 0.72rem;
+  color: var(--site-text);
+  background: var(--site-surface-alt);
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+}
+
+.archetype-freq-title,
+.archetype-guides-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--site-text-muted);
+  margin: 1rem 0 0.5rem;
+}
+
+.archetype-freq-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.archetype-freq-row {
+  display: grid;
+  /* Fixed bar track rather than 1fr: at row width a 100% bar and a 75%
+     bar would look nearly identical, because the difference is spread
+     across too much space to compare. A fixed track makes the fills
+     visually proportional. Track shrinks inside the two-column detail
+     (see .archetype-columns .archetype-freq-row below). */
+  grid-template-columns: minmax(9rem, 14rem) 20rem 3rem;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* Inside the two-column layout the frequency list has roughly half the
+   width, so the name and bar columns shrink to fit. */
+.archetype-columns .archetype-freq-row {
+  grid-template-columns: minmax(7rem, 11rem) 1fr 3rem;
+}
+
+/* Board-in rows keep a fixed copies column but let the bar take the
+   remaining space inside their narrower column. */
+.archetype-columns .archetype-boardin .archetype-freq-row {
+  grid-template-columns: minmax(7rem, 11rem) 1fr 2.75rem 2.75rem;
+}
+
+.archetype-freq-name {
+  color: var(--site-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archetype-freq-bar-wrap {
+  position: relative;
+  height: 8px;
+  background: var(--site-surface-hi);
+  border-radius: 4px;
+  overflow: hidden;
+  /* Fill the 20rem grid track. The bar inside fills a percentage of
+     this, so the track must have a definite width. */
+  width: 100%;
+}
+
+.archetype-freq-bar {
+  display: block;
+  height: 100%;
+  background: var(--site-accent);
+  border-radius: 4px;
+}
+
+.archetype-freq-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--site-text-muted);
+  text-align: right;
+  font-size: 0.8rem;
+}
+
+.archetype-freq-more {
+  margin-top: 0.6rem;
+  background: transparent;
+  border: none;
+  color: var(--site-accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.archetype-freq-more:hover {
+  color: var(--site-accent-hover);
+  text-decoration: underline;
+}
+
+/* --- Guides within an archetype --- */
+
+.archetype-guides-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.archetype-guide-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--site-surface-alt);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 4px;
+}
+
+.archetype-guide-info {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.archetype-guide-author {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--site-text);
+}
+
+.archetype-guide-verified {
+  color: var(--site-accent);
+  font-weight: 700;
+}
+
+.archetype-guide-date {
+  font-size: 0.75rem;
+  color: var(--site-text-muted);
+}
+
+.archetype-guide-open {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.82rem;
+}
+
+/* --- Board-in list (v2 "What comes in") ---
+   A card-first view: sideboard cards ranked by how many matchups they
+   come in for. Clicking a card reveals the per-matchup detail. The
+   index stores this matchup-first; the component inverts it for display. */
+
+.archetype-boardin {
+  margin-top: 0;
+}
+
+.archetype-boardin-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--site-text-muted);
+}
+
+.archetype-boardin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.archetype-boardin-card {
+  border-top: 1px solid transparent;
+}
+
+/* Visual break between matchup-count tiers (3-matchup cards, then
+   2-matchup, then 1-matchup). Drawn as a top border on the first card
+   of each new tier, so the list reads as grouped without named labels. */
+.archetype-boardin-card.is-new-tier {
+  border-top-color: var(--site-border-soft);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.archetype-boardin-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0;
+  background: transparent;
+  border: none;
+  color: var(--site-text);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.archetype-boardin-row:hover .archetype-boardin-name {
+  color: var(--site-accent);
+}
+
+.archetype-boardin-row:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: -2px;
+}
+
+.archetype-boardin-chevron {
+  color: var(--site-accent);
+  font-size: 0.75rem;
+  width: 1rem;
+  flex: 0 0 auto;
+}
+
+.archetype-boardin-name {
+  font-weight: 600;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archetype-boardin-count {
+  flex: 0 0 auto;
+  color: var(--site-text-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.archetype-boardin-detail {
+  list-style: none;
+  margin: 0 0 0.4rem 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.archetype-boardin-detail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--site-text-muted);
+}
+
+.archetype-boardin-detail-vs {
+  color: var(--site-text);
+}
+
+.archetype-boardin-detail-pct {
+  font-variant-numeric: tabular-nums;
+}
+
+.archetype-boardin-detail-copies {
+  margin-left: auto;
+  color: var(--site-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

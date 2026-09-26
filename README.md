@@ -51,8 +51,13 @@ All external dependencies load over HTTPS, so the app works from any secure orig
 
 ## Project structure
 
+Entry point and styling:
+
 - index.html - entry point
 - css/app.css - styling (Forge dark theme + print rules)
+
+Core modules:
+
 - js/app.js - Vue app bootstrap
 - js/store.js - reactive state + deck loading pipeline
 - js/parser.js - decklist text parser
@@ -60,11 +65,36 @@ All external dependencies load over HTTPS, so the app works from any secure orig
 - js/carddb.js - offline fallback card database
 - js/archetype.js - deck-name auto-detection
 - js/persistence.js - save/load + JSON share format
+- js/guides.js - community guide fetch/submit + archetype index
+- js/guides-list.js - shared data layer for the two guide-list views
+- js/githubauth.js - GitHub OAuth device flow
+- js/card-utils.js - shared helpers for the print card components
 - js/titlecard.js - title card helpers
 - js/textures.js - tiling + frame textures
 - js/manasymbols.js - mana symbol sources
 - js/pdfexport.js - client-side PDF export
+
+Components:
+
 - js/components/ - Vue components
+- js/components/ArchetypeView.js - archetype index view (Browse)
+
+Tests and docs:
+
+- tests.html - test runner page (open over HTTP)
+- js/tests.js - assertions for parser, share format, store, index
+- docs/data-model.md - the corpus model and why it is shaped this way
+- docs/schema-rationale.md - short form of the above
+- docs/archetype-index-spec.md - the archetypes.json contract
+
+Fixtures:
+
+- guides/ - bundled guide JSONs and the demo index
+- guides/manifest.json - local mirror of the guide list
+- guides/archetypes.demo.json - hand-computed index for the bundled
+  guides, used in development before the GitHub Action produces a real
+  archetypes.json. It is tried only after the remote and local real
+  indexes are missing, and is labeled "index: demo" in the UI.
 
 ## Design notes
 
@@ -76,6 +106,15 @@ All external dependencies load over HTTPS, so the app works from any secure orig
 
 ## Notes
 
+- **The archetype view runs on a fixture in development.** The Browse
+  page's archetype grouping reads a derived `archetypes.json`, which is
+  produced by a GitHub Action in the guides repository on every
+  submission. That action is not yet wired up, so in the meantime the
+  client falls back to `guides/archetypes.demo.json`, a hand-computed
+  index for the bundled guides. The fallback order is remote index, then
+  local index, then demo. The demo file is shadowed the moment a real
+  index exists and can be deleted then. See
+  `docs/archetype-index-spec.md` for the producer contract.
 - **Network activity** is limited to four hosts:
   1. **api.scryfall.com** — card metadata lookups (no auth, no key).
   2. **cards.scryfall.io** — card images for the hover preview.

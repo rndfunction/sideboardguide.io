@@ -2,6 +2,8 @@
 // Collapses to a single-line summary after a successful parse.
 // Expanded view is two-column: textarea on the left, file-upload and
 // helper actions on the right.
+import { parseDek, toDecklistText } from "../parser.js";
+
 const DeckInput = {
   props: {
     parsed: { type: Object, default: null },
@@ -174,19 +176,23 @@ const DeckInput = {
       this.fileError = "";
       const name = (file.name || "").toLowerCase();
 
-      // .dek files are MTGO XML with card IDs, not names. Warn the user and
-      // guide them to a plain-text export instead of silently failing.
+      // .dek files are MTGO XML. They carry a CatID (an internal MTGO
+      // card id) AND a Name attribute with the printed card name, so we
+      // can read them without any card database. parseDek handles the
+      // XML; toDecklistText renders the result as a plain-text decklist
+      // so the textarea shows something editable and everything
+      // downstream (Scryfall lookup, enrichment, the grid) works
+      // unchanged.
       if (name.endsWith(".dek")) {
         const reader = new FileReader();
         reader.onload = () => {
-          const head = String(reader.result || "").slice(0, 200);
-          if (/<\?xml|<Deck/i.test(head)) {
-            this.fileError =
-              "MTGO .dek files store internal card IDs, not names, so we can't read them. " +
-              "Export as plain text from Moxfield, MTGGoldfish, or MTG Arena instead.";
-          } else {
-            this.applyFileText(String(reader.result || ""));
+          const text = String(reader.result || "");
+          const parsed = parseDek(text);
+          if (parsed.error) {
+            this.fileError = parsed.error;
+            return;
           }
+          this.applyFileText(toDecklistText(parsed));
         };
         reader.onerror = () => { this.fileError = "Could not read file."; };
         reader.readAsText(file);
@@ -275,7 +281,7 @@ const DeckInput = {
               @click="triggerFileInput"
             >Upload decklist</button>
             <p class="deck-input-side-hint">
-              .txt from Moxfield, MTGGoldfish, MTG Arena, or any plain-text export.
+              .txt from Moxfield, MTGGoldfish, MTG Arena, or any plain-text export, or a .dek from MTGO.
             </p>
 
             <hr class="deck-input-side-divider" />
@@ -302,7 +308,7 @@ const DeckInput = {
             :disabled="!canParse"
             @click="onParse"
           >
-            {{ loading ? "Looking up..." : "Parse & Look Up" }}
+            {{ loading ? "Loading..." : "Go" }}
           </button>
           <button
             type="button"

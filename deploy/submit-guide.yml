@@ -1,0 +1,107 @@
+name: Submit Guide
+
+on:
+  repository_dispatch:
+    types: [submit-guide]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rate limit check
+        id: ratelimit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CUTOFF=$(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1H +%Y-%m-%dT%H:%M:%SZ)
+          COUNT=$(gh pr list --label guide-submission --state all --json createdAt --jq "[.[] | select(.createdAt >= \"$CUTOFF\")] | length" 2>/dev/null || echo 0)
+          echo "recent submissions: $COUNT"
+          if [ "$COUNT" -ge 10 ]; then
+            echo "too-many=true" >> $GITHUB_OUTPUT
+          else
+            echo "too-many=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Write guide file
+        if: steps.ratelimit.outputs.too-many == 'false'
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: |
+          mkdir -p guides
+          printf '%s' "$PAYLOAD" > /tmp/payload.json
+          cat > /tmp/write-guide.py <<'PY'
+          import json, pathlib, datetime, re
+          payload = json.load(open('/tmp/payload.json'))
+          filename = payload.get('filename') or 'untitled.json'
+          filename = ''.join(c for c in filename if c.isalnum() or c in '._-')
+          if not filename.endswith('.json'):
+              filename += '.json'
+          guide = payload.get('guide') or {}
+          meta = payload.get('meta') or {}
+          (pathlib.Path('guides') / filename).write_text(json.dumps(guide, indent=2) + chr(10))
+          mpath = pathlib.Path('manifest.json')
+          manifest = json.loads(mpath.read_text()) if mpath.exists() else {'version': 1, 'guides': []}
+          archetype = meta.get('archetype') or guide.get('deck', {}).get('archetype') or ''
+          archetype_key = re.sub(r'[^a-z0-9]+', '-', archetype.strip().lower()).strip('-')
+          entry = {
+              'file': filename,
+              'deckName': meta.get('deckName') or guide.get('deck', {}).get('name') or 'Untitled Deck',
+              'format': meta.get('format') or guide.get('deck', {}).get('format') or '',
+              'archetype': archetype,
+              'archetypeKey': archetype_key,
+              'author': meta.get('author') or 'anonymous',
+              'tags': [],
+              'verified': False,
+              'createdAt': datetime.date.today().isoformat(),
+              'lastEditedAt': datetime.date.today().isoformat()
+          }
+          manifest.setdefault('guides', []).append(entry)
+          manifest['lastUpdated'] = entry['createdAt']
+          mpath.write_text(json.dumps(manifest, indent=2) + chr(10))
+          open('/tmp/filename.txt', 'w').write(filename)
+          PY
+          python3 /tmp/write-guide.py
+
+      - name: Rebuild archetype index
+        if: steps.ratelimit.outputs.too-many == 'false'
+        run: |
+          python3 index_builder.py --manifest manifest.json --guides guides --out archetypes.json
+
+      - name: Open PR and queue auto-merge
+        if: steps.ratelimit.outputs.too-many == 'false'
+        env:
+          # Use the PAT instead of GITHUB_TOKEN so that workflows triggered
+          # by the resulting pull_request event run without manual approval.
+          # Otherwise validate-guide would sit pending and auto-merge would
+          # never fire.
+          GH_TOKEN: ${{ secrets.SUBMIT_BOT_TOKEN }}
+        run: |
+          FILENAME=$(cat /tmp/filename.txt)
+          BRANCH="guide-submission/$(date +%s)-${FILENAME%.json}"
+          git config user.name "guide-bot"
+          git config user.email "guide-bot@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add "guides/$FILENAME" manifest.json archetypes.json
+          git commit -m "Add guide: $FILENAME"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -u origin "$BRANCH"
+          REPO="${{ github.repository }}"
+          RAW_URL="https://raw.githubusercontent.com/$REPO/$BRANCH/guides/$FILENAME"
+          ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$RAW_URL")
+          PREVIEW_URL="https://rndfunction.github.io/sideboardguide.io/?preview=$ENCODED"
+          BODY="New guide submission. File: guides/$FILENAME Preview: $PREVIEW_URL"
+          gh pr create --title "Guide submission: $FILENAME" --body "$BODY" --label guide-submission --head "$BRANCH" --base main
+
+          # Give GitHub a moment to register the PR before queuing auto-merge.
+          sleep 5
+
+          # Queue auto-merge. If validate-guide passes and branch protection
+          # is satisfied, GitHub merges automatically. Failure is non-fatal
+          # -- the PR stays open for manual review.
+          gh pr merge "$BRANCH" --auto --squash || echo "auto-merge queue failed (non-fatal); PR remains open for review"

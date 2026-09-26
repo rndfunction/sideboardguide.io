@@ -1,22 +1,66 @@
 {
   "version": 1,
-  "lastUpdated": "2026-09-24",
+  "lastUpdated": "2026-09-25",
   "guides": [
     {
       "file": "mono-red-madness-pauper.json",
       "deckName": "Mono Red Madness",
       "format": "Pauper",
       "archetype": "Mono Red Madness",
+      "archetypeKey": "mono-red-madness",
       "author": "rndfunction",
-      "createdAt": "2026-09-24"
+      "tags": ["budget"],
+      "verified": true,
+      "createdAt": "2026-09-24",
+      "lastEditedAt": "2026-09-24"
+    },
+    {
+      "file": "mono-red-madness-pauper-v2.json",
+      "deckName": "Mono Red Madness",
+      "format": "Pauper",
+      "archetype": "Mono Red Madness",
+      "archetypeKey": "mono-red-madness",
+      "author": "rndfunction",
+      "tags": ["budget"],
+      "verified": false,
+      "createdAt": "2026-09-25",
+      "lastEditedAt": "2026-09-25"
+    },
+    {
+      "file": "mono-red-madness-pauper-v3.json",
+      "deckName": "Mono Red Madness",
+      "format": "Pauper",
+      "archetype": "Mono Red Madness",
+      "archetypeKey": "mono-red-madness",
+      "author": "rndfunction",
+      "tags": ["budget"],
+      "verified": false,
+      "createdAt": "2026-09-25",
+      "lastEditedAt": "2026-09-25"
+    },
+    {
+      "file": "mono-red-madness-pauper-v4.json",
+      "deckName": "Mono Red Madness",
+      "format": "Pauper",
+      "archetype": "Mono Red Madness",
+      "archetypeKey": "mono-red-madness",
+      "author": "rndfunction",
+      "tags": ["budget"],
+      "verified": false,
+      "createdAt": "2026-09-25",
+      "lastEditedAt": "2026-09-25"
     },
     {
       "file": "mono-red-burn-modern.json",
       "deckName": "Mono-Red Burn",
       "format": "Modern",
       "archetype": "Mono-Red Burn",
+      "archetypeKey": "mono-red-burn",
       "author": "rndfunction",
-      "createdAt": "2026-09-24"
+      "tags": [],
+      "verified": true,
+      "createdAt": "2026-09-24",
+      "lastEditedAt": "2026-09-24"
     }
   ]
 }

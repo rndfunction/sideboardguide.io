@@ -1,0 +1,53 @@
+{
+  "format": "mtg-sideboard-guide",
+  "version": 1,
+  "generator": "Sideboard Guide Builder",
+  "createdAt": "2026-09-25T00:00:00.000Z",
+  "deck": {
+    "name": "Mono Red Madness",
+    "format": "Pauper",
+    "archetype": "Mono Red Madness",
+    "rawText": "3 Faithless Looting\n4 Fiery Temper\n2 Fireblast\n4 Grab the Prize\n4 Guttersnipe\n4 Highway Robbery\n4 Kessig Flamebreather\n4 Lava Dart\n4 Lightning Bolt\n18 Mountain\n4 Sneaky Snacker\n4 Voldaren Epicure\n\n4 Pyroblast\n3 Searing Blaze\n2 Tectonic Hazard\n2 Red Elemental Blast\n1 Cleansing Wildfire\n1 Crimson Fleet Commodore\n2 Smash to Smithereens"
+  },
+  "matchups": [
+    "Mono U Faeries",
+    "Tron",
+    "Dimir Control"
+  ],
+  "plan": {
+    "Highway Robbery@main": {
+      "Mono U Faeries": { "dir": "out", "count": 2 },
+      "Dimir Control": { "dir": "out", "count": 2 }
+    },
+    "Grab the Prize@main": {
+      "Mono U Faeries": { "dir": "out", "count": 1 }
+    },
+    "Sneaky Snacker@main": {
+      "Tron": { "dir": "out", "count": 2 }
+    },
+    "Fireblast@main": {
+      "Dimir Control": { "dir": "out", "count": 1 }
+    },
+    "Pyroblast@side": {
+      "Mono U Faeries": { "dir": "in", "count": 3 },
+      "Dimir Control": { "dir": "in", "count": 2 }
+    },
+    "Red Elemental Blast@side": {
+      "Mono U Faeries": { "dir": "in", "count": 2 },
+      "Dimir Control": { "dir": "in", "count": 1 }
+    },
+    "Smash to Smithereens@side": {
+      "Tron": { "dir": "in", "count": 2 }
+    },
+    "Searing Blaze@side": {
+      "Tron": { "dir": "in", "count": 3 }
+    }
+  },
+  "titleCard": {
+    "color": "#8a2a1a",
+    "fontKey": "cinzel",
+    "symbol": "auto",
+    "texture": "none",
+    "intensity": "medium"
+  }
+}

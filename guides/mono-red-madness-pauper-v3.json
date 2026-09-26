@@ -1,0 +1,55 @@
+{
+  "format": "mtg-sideboard-guide",
+  "version": 1,
+  "generator": "Sideboard Guide Builder",
+  "createdAt": "2026-09-25T00:00:00.000Z",
+  "deck": {
+    "name": "Mono Red Madness",
+    "format": "Pauper",
+    "archetype": "Mono Red Madness",
+    "rawText": "4 Faithless Looting\n4 Fiery Temper\n4 Fireblast\n4 Grab the Prize\n3 Guttersnipe\n4 Kessig Flamebreather\n4 Lava Dart\n4 Lightning Bolt\n18 Mountain\n1 Sazacap's Brew\n4 Sneaky Snacker\n4 Voldaren Epicure\n\n4 Pyroblast\n3 Searing Blaze\n2 Tectonic Hazard\n2 Red Elemental Blast\n1 Crimson Fleet Commodore\n1 Cleansing Wildfire\n2 Smash to Smithereens"
+  },
+  "matchups": [
+    "Mono U Faeries",
+    "Tron",
+    "Dimir Control"
+  ],
+  "plan": {
+    "Fireblast@main": {
+      "Mono U Faeries": { "dir": "out", "count": 3 },
+      "Dimir Control": { "dir": "out", "count": 2 }
+    },
+    "Lava Dart@main": {
+      "Dimir Control": { "dir": "out", "count": 2 }
+    },
+    "Kessig Flamebreather@main": {
+      "Mono U Faeries": { "dir": "out", "count": 1 }
+    },
+    "Sazacap's Brew@main": {
+      "Dimir Control": { "dir": "out", "count": 1 }
+    },
+    "Pyroblast@side": {
+      "Mono U Faeries": { "dir": "in", "count": 4 },
+      "Dimir Control": { "dir": "in", "count": 3 }
+    },
+    "Red Elemental Blast@side": {
+      "Mono U Faeries": { "dir": "in", "count": 2 }
+    },
+    "Searing Blaze@side": {
+      "Tron": { "dir": "in", "count": 3 }
+    },
+    "Cleansing Wildfire@side": {
+      "Tron": { "dir": "in", "count": 1 }
+    },
+    "Crimson Fleet Commodore@side": {
+      "Dimir Control": { "dir": "in", "count": 1 }
+    }
+  },
+  "titleCard": {
+    "color": "#8a2a1a",
+    "fontKey": "cinzel",
+    "symbol": "auto",
+    "texture": "none",
+    "intensity": "medium"
+  }
+}

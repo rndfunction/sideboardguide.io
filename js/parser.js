@@ -97,9 +97,13 @@ export function parseDecklist(text) {
       let rest = match[2];
 
       // Strip trailing set/collector info: "Lightning Bolt (2X2) 117"
-      // and foil marker "*F*" / "FOIL"
+      // and foil marker "*F*" / "FOIL".
+      //
+      // Set codes appear in both uppercase (MTGO, older Arena exports:
+      // "2X2") and lowercase (Arena, Moxfield, MTGGoldfish: "thb", "mh1").
+      // The character class and the `i` flag together accept both.
       let set = null;
-      const setMatch = rest.match(/^(.+?)\s+\(([A-Z0-9]{2,6})\)(?:\s+\S+)?\s*$/);
+      const setMatch = rest.match(/^(.+?)\s+\(([A-Za-z0-9]{2,6})\)(?:\s+\S+)?\s*$/i);
       if (setMatch) {
         rest = setMatch[1];
         set = setMatch[2];
@@ -108,6 +112,13 @@ export function parseDecklist(text) {
 
       if (!rest) { unparsed.push(line); continue; }
 
+      // `set` is parsed and retained but not displayed today. It is kept
+      // on the entry deliberately: a future feature may let a guide's
+      // author pick a specific printing (custom art), and the set code is
+      // the only key that distinguishes one printing of a card from
+      // another. It also survives in rawText, but parsing it here means
+      // that feature would not have to re-parse every stored guide. See
+      // the note in docs/data-model.md on retained-but-unused fields.
       target.push({ count, name: rest, set });
     }
   };
@@ -146,4 +157,103 @@ export function uniqueNames(parsed) {
   for (const e of parsed.mainboard) names.add(e.name);
   for (const e of parsed.sideboard) names.add(e.name);
   return Array.from(names);
+}
+
+/**
+ * Parse an MTGO .dek file (XML) into the same shape parseDecklist returns:
+ * { mainboard: [{ count, name }], sideboard: [...], unparsed: [...] }.
+ *
+ * The .dek format carries a CatID (an internal MTGO card id that would
+ * need a database to resolve) AND a Name attribute with the card's
+ * printed name in plain text. We only need the name, so no database is
+ * required. Every <Cards> element looks like:
+ *
+ *   <Cards CatID="72474" Quantity="4" Sideboard="false" Name="Faerie Seer"/>
+ *
+ * Quantity and Sideboard give the count and the board; Name gives the
+ * card. Attribute order is not guaranteed, so we read attributes by
+ * name rather than by position.
+ *
+ * Returns { error } instead of the normal shape when the input is not
+ * parseable as XML, so the caller can show a friendly message.
+ */
+export function parseDek(xmlText) {
+  const text = String(xmlText || "").trim();
+  if (!text) {
+    return { error: "The file is empty." };
+  }
+
+  // DOMParser is available in every browser. It is used instead of a
+  // regex because attribute order, quoting, and whitespace are not
+  // guaranteed, and a real XML parser handles all of that correctly.
+  if (typeof DOMParser === "undefined") {
+    return { error: "This environment cannot parse XML." };
+  }
+
+  let doc;
+  try {
+    doc = new DOMParser().parseFromString(text, "text/xml");
+  } catch (err) {
+    return { error: "The file could not be read as XML." };
+  }
+
+  // A malformed XML document yields a <parsererror> element rather than
+  // throwing. Detect it explicitly.
+  if (doc.querySelector("parsererror")) {
+    return { error: "The file is not valid .dek XML." };
+  }
+
+  const cards = doc.querySelectorAll("Cards");
+  if (!cards.length) {
+    return { error: "No cards found in the .dek file." };
+  }
+
+  const mainboard = [];
+  const sideboard = [];
+  const unparsed = [];
+
+  for (const node of cards) {
+    const name = (node.getAttribute("Name") || "").trim();
+    const qtyRaw = node.getAttribute("Quantity") || "";
+    const isSide = (node.getAttribute("Sideboard") || "").toLowerCase() === "true";
+    const count = parseInt(qtyRaw, 10);
+
+    if (!name || !count || count <= 0) {
+      // Keep the raw XML of the offending card so the caller can show
+      // something if it wants to.
+      unparsed.push(node.outerHTML || name || "(unnamed card)");
+      continue;
+    }
+
+    (isSide ? sideboard : mainboard).push({ count, name, set: null });
+  }
+
+  if (!mainboard.length && !sideboard.length) {
+    return { error: "No readable cards found in the .dek file." };
+  }
+
+  return { mainboard, sideboard, unparsed };
+}
+
+/**
+ * Render a parsed deck ({ mainboard, sideboard }) back to the plain-text
+ * decklist format that parseDecklist understands. Used to convert a .dek
+ * into the app's normal text representation, so the textarea shows an
+ * editable list and everything downstream works unchanged.
+ */
+export function toDecklistText(parsed) {
+  if (!parsed || (!parsed.mainboard && !parsed.sideboard)) return "";
+  const lines = [];
+  for (const e of parsed.mainboard || []) {
+    lines.push(e.count + " " + e.name);
+  }
+  const side = parsed.sideboard || [];
+  if (side.length) {
+    lines.push("");
+    lines.push("Sideboard");
+    for (const e of side) {
+      lines.push(e.count + " " + e.name);
+    }
+  }
+  return lines.join("\n");
 }

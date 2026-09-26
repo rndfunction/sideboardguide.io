@@ -4,21 +4,39 @@
 //
 // Data loading (list + open + source label) is shared with GuideBrowser
 // via GuideListMixin so the two views can never drift.
+//
+// Two Browse modes:
+//   - "archetype": renders ArchetypeView when the derived index has at
+//     least one bucket with guideCount >= 2. Groups guides by archetype
+//     and shows the aggregate card-frequency view.
+//   - "flat": the original grid of individual guides.
+// The default is archetype-when-usable; a manual toggle overrides it for
+// the session. See /docs/archetype-index-spec.md.
 
 import { GuideListMixin } from "../guides-list.js";
+import { listArchetypes, hasUsableArchetypes } from "../guides.js";
+import ArchetypeView from "./ArchetypeView.js";
 
 const GuideLibrary = {
   mixins: [GuideListMixin],
+  components: { ArchetypeView },
   emits: ["load-share", "submit-guide"],
   data() {
     return {
       filterFormat: "all",
       filterText: "",
-      sourceOpen: false
+      sourceOpen: false,
+      // Archetype index state.
+      archetypeIndex: null,
+      archetypeSource: "none",
+      archetypeLoading: false,
+      // null = "auto" (use archetype view iff usable); "flat" = forced flat.
+      viewOverride: null
     };
   },
   mounted() {
     this.refreshGuides();
+    this.refreshArchetypes();
   },
   computed: {
     formats() {
@@ -45,11 +63,77 @@ const GuideLibrary = {
     },
     hasFilters() {
       return this.filterFormat !== "all" || this.filterText.trim().length > 0;
+    },
+    /**
+     * Whether the archetype view should be shown, taking the manual
+     * override and the usability check into account.
+     *
+     * Named `archetypeViewUsable` rather than `hasUsableArchetypes` to
+     * avoid colliding with the imported helper of that name. Note this is
+     * a computed: templates must reference it WITHOUT parentheses.
+     */
+    archetypeViewUsable() {
+      if (this.viewOverride === "flat") return false;
+      if (this.viewOverride === "archetype") return true;
+      return hasUsableArchetypes(this.archetypeIndex);
+    },
+    /**
+     * Convenience computed for the template: true when the archetype view
+     * is currently active. Same value the toggle buttons read.
+     */
+    showArchetypeView() {
+      return this.archetypeViewUsable;
+    },
+    /**
+     * The index filtered down to the current format tab. When the user
+     * picks a format, only archetypes in that format are shown; when
+     * "all", every archetype is shown. Text search is not applied to
+     * archetypes -- they are a small, named set and filtering them by
+     * free text would only hide them confusingly.
+     */
+    filteredIndex() {
+      if (!this.archetypeIndex || !Array.isArray(this.archetypeIndex.archetypes)) {
+        return { version: 1, archetypes: [] };
+      }
+      const list = this.archetypeIndex.archetypes.filter((a) => {
+        if (this.filterFormat !== "all" && a.format !== this.filterFormat) return false;
+        return true;
+      });
+      return Object.assign({}, this.archetypeIndex, { archetypes: list });
     }
   },
   methods: {
     onOpen(file) {
       return this.openGuide(file, this.$emit.bind(this));
+    },
+    /**
+     * Fetch the derived archetype index. Silent on failure -- a missing
+     * or malformed index simply leaves archetypeIndex at null and the
+     * view falls back to the flat guide list.
+     */
+    async refreshArchetypes() {
+      this.archetypeLoading = true;
+      try {
+        const result = await listArchetypes();
+        this.archetypeIndex = result.index;
+        this.archetypeSource = result.source;
+      } catch (_) {
+        this.archetypeIndex = null;
+        this.archetypeSource = "none";
+      } finally {
+        this.archetypeLoading = false;
+      }
+    },
+    /**
+     * ArchetypeView emits "load-share-file"; route it through the same
+     * openGuide() path the flat grid uses, so both modes emit load-share
+     * identically to the parent.
+     */
+    onArchetypeOpen(file) {
+      return this.openGuide(file, this.$emit.bind(this));
+    },
+    setViewOverride(mode) {
+      this.viewOverride = this.viewOverride === mode ? null : mode;
     },
     clearFilters() {
       this.filterFormat = "all";
@@ -121,6 +205,33 @@ const GuideLibrary = {
         {{ sourceLabel }}
       </div>
 
+      <div class="guide-library-view-toggle">
+        <button
+          type="button"
+          class="guide-library-view-btn"
+          :class="{ 'is-active': showArchetypeView }"
+          :disabled="!archetypeViewUsable"
+          :aria-pressed="showArchetypeView ? 'true' : 'false'"
+          @click="setViewOverride('archetype')"
+          :title="archetypeViewUsable
+            ? 'Group guides by archetype'
+            : 'Archetype view appears once an archetype has more than one guide'"
+        >By archetype</button>
+        <button
+          type="button"
+          class="guide-library-view-btn"
+          :class="{ 'is-active': !showArchetypeView }"
+          :aria-pressed="!showArchetypeView ? 'true' : 'false'"
+          @click="setViewOverride('flat')"
+        >All guides</button>
+      </div>
+
+      <archetype-view
+        v-if="showArchetypeView && !loading && !error"
+        :index="filteredIndex"
+        @load-share-file="onArchetypeOpen"
+      ></archetype-view>
+
       <div v-if="loading" class="guide-library-status">
         <div class="guide-library-spinner" aria-hidden="true"></div>
         <p>Loading guides...</p>
@@ -141,7 +252,7 @@ const GuideLibrary = {
         >Clear filters</button>
       </div>
 
-      <ul v-else class="guide-library-grid">
+      <ul v-else-if="!showArchetypeView" class="guide-library-grid">
         <li v-for="g in filtered" :key="g.file" class="guide-library-card">
           <div class="guide-library-card-body">
             <h3 class="guide-library-card-name">{{ g.deckName || g.file }}</h3>

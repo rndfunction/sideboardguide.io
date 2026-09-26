@@ -1,0 +1,121 @@
+{
+  "version": 2,
+  "lastUpdated": "2026-09-25",
+  "archetypes": [
+    {
+      "key": "mono-red-madness",
+      "name": "Mono Red Madness",
+      "format": "Pauper",
+      "guideCount": 4,
+      "cardFrequency": [
+        { "name": "Faithless Looting", "inclusion": 1.0, "avgCopies": 3.5 },
+        { "name": "Fiery Temper", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Fireblast", "inclusion": 1.0, "avgCopies": 3.0 },
+        { "name": "Grab the Prize", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Guttersnipe", "inclusion": 1.0, "avgCopies": 3.5 },
+        { "name": "Kessig Flamebreather", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Lava Dart", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Lightning Bolt", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Mountain", "inclusion": 1.0, "avgCopies": 18.0 },
+        { "name": "Sneaky Snacker", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Voldaren Epicure", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Highway Robbery", "inclusion": 0.75, "avgCopies": 3.0 },
+        { "name": "Sazacap's Brew", "inclusion": 0.75, "avgCopies": 0.75 }
+      ],
+      "boardInMatrix": {
+        "Mono U Faeries": [
+          { "name": "Pyroblast", "inclusion": 1.0, "avgCopies": 3.5 },
+          { "name": "Red Elemental Blast", "inclusion": 1.0, "avgCopies": 1.5 },
+          { "name": "Crimson Fleet Commodore", "inclusion": 0.25, "avgCopies": 1.0 }
+        ],
+        "Tron": [
+          { "name": "Cleansing Wildfire", "inclusion": 0.75, "avgCopies": 1.67 },
+          { "name": "Searing Blaze", "inclusion": 0.5, "avgCopies": 3.0 },
+          { "name": "Smash to Smithereens", "inclusion": 0.5, "avgCopies": 1.5 }
+        ],
+        "Dimir Control": [
+          { "name": "Pyroblast", "inclusion": 1.0, "avgCopies": 3.0 },
+          { "name": "Red Elemental Blast", "inclusion": 0.75, "avgCopies": 1.0 },
+          { "name": "Crimson Fleet Commodore", "inclusion": 0.75, "avgCopies": 1.0 }
+        ]
+      },
+      "tags": ["budget"],
+      "guides": [
+        {
+          "file": "mono-red-madness-pauper-v3.json",
+          "author": "rndfunction",
+          "verified": false,
+          "lastEditedAt": "2026-09-25",
+          "overlapWithCore": 0.87
+        },
+        {
+          "file": "mono-red-madness-pauper.json",
+          "author": "rndfunction",
+          "verified": true,
+          "lastEditedAt": "2026-09-24",
+          "overlapWithCore": 0.85
+        },
+        {
+          "file": "mono-red-madness-pauper-v2.json",
+          "author": "rndfunction",
+          "verified": false,
+          "lastEditedAt": "2026-09-25",
+          "overlapWithCore": 0.83
+        },
+        {
+          "file": "mono-red-madness-pauper-v4.json",
+          "author": "rndfunction",
+          "verified": false,
+          "lastEditedAt": "2026-09-25",
+          "overlapWithCore": 0.82
+        }
+      ]
+    },
+    {
+      "key": "mono-red-burn",
+      "name": "Mono-Red Burn",
+      "format": "Modern",
+      "guideCount": 1,
+      "cardFrequency": [
+        { "name": "Arid Mesa", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Eidolon of the Great Revel", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Fiery Islet", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Lava Spike", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Lightning Bolt", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Monastery Swiftspear", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Mountain", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Ramunap Ruins", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Rift Bolt", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Scalding Tarn", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Searing Blaze", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Skewer the Critics", "inclusion": 1.0, "avgCopies": 4.0 },
+        { "name": "Snow-Covered Mountain", "inclusion": 1.0, "avgCopies": 8.0 },
+        { "name": "Soul-Scar Mage", "inclusion": 1.0, "avgCopies": 4.0 }
+      ],
+      "boardInMatrix": {
+        "Murktide": [
+          { "name": "Roiling Vortex", "inclusion": 1.0, "avgCopies": 3.0 },
+          { "name": "Blood Moon", "inclusion": 1.0, "avgCopies": 2.0 }
+        ],
+        "Amulet Titan": [
+          { "name": "Blood Moon", "inclusion": 1.0, "avgCopies": 3.0 },
+          { "name": "Deflecting Palm", "inclusion": 1.0, "avgCopies": 3.0 }
+        ],
+        "Rhinos": [
+          { "name": "Anger of the Gods", "inclusion": 1.0, "avgCopies": 3.0 },
+          { "name": "Skullcrack", "inclusion": 1.0, "avgCopies": 1.0 }
+        ]
+      },
+      "tags": [],
+      "guides": [
+        {
+          "file": "mono-red-burn-modern.json",
+          "author": "rndfunction",
+          "verified": true,
+          "lastEditedAt": "2026-09-24",
+          "overlapWithCore": 1.0
+        }
+      ]
+    }
+  ]
+}

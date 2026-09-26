@@ -15,13 +15,18 @@
 // exercised when Vue is present on the page. tests.html loads Vue from
 // the same CDN the app uses, so this is normally true.
 
-import { parseDecklist, sumCounts, uniqueNames } from "./parser.js";
+import { parseDecklist, sumCounts, uniqueNames, parseDek, toDecklistText } from "./parser.js";
 import {
   titleCase,
   buildSharePayload,
   parseShare
 } from "./persistence.js";
 import { identifyDeck } from "./archetype.js";
+import {
+  isValidArchetypeIndex,
+  hasUsableArchetypes,
+  listArchetypes
+} from "./guides.js";
 // store.js is imported statically rather than via dynamic import() inside
 // runStoreTests(). The test page runs inside an iframe whose base URL is
 // about:srcdoc, and dynamic imports there resolve relative to that base
@@ -155,10 +160,61 @@ suite("parser: card line forms", () => {
     assertEq(r.mainboard[0].count, 4);
   });
 
-  test("strips set code and collector number", () => {
+  test("strips uppercase set code and collector number", () => {
     const r = parseDecklist("4 Lightning Bolt (2X2) 117");
     assertEq(r.mainboard[0].name, "Lightning Bolt");
     assertEq(r.mainboard[0].set, "2X2");
+  });
+
+  test("strips lowercase set code and collector number", () => {
+    // Arena, Moxfield, and MTGGoldfish emit lowercase set codes.
+    const r = parseDecklist("18 Mountain (thb) 253");
+    assertEq(r.mainboard[0].name, "Mountain");
+    assertEq(r.mainboard[0].set, "thb");
+    assertEq(r.mainboard[0].count, 18);
+  });
+
+  test("strips lowercase set code with no collector number", () => {
+    const r = parseDecklist("4 Lava Dart (mh1)");
+    assertEq(r.mainboard[0].name, "Lava Dart");
+    assertEq(r.mainboard[0].set, "mh1");
+  });
+
+  test("a whole decklist with lowercase set codes parses cleanly", () => {
+    // A realistic mainboard (sums to >= 40) so the blank-line heuristic
+    // correctly treats the trailing block as a sideboard.
+    const text = [
+      "18 Mountain (thb) 253",
+      "4 Lava Dart (mh1) 134",
+      "4 Voldaren Epicure (vow) 308",
+      "4 Faithless Looting (soc) 244",
+      "4 Lightning Bolt (fca) 40",
+      "4 Highway Robbery (otj) 129",
+      "4 Sneaky Snacker (mh3) 205",
+      "4 Grab the Prize (dsk) 138",
+      "4 Kessig Flamebreather (vow) 164",
+      "3 Guttersnipe (j25) 138",
+      "4 Fiery Temper (soi) 156",
+      "3 Fireblast (plist) 79",
+      "",
+      "3 Relic of Progenitus (mma) 213",
+      "4 Searing Blaze (plist) 90",
+      "2 Cast into the Fire (ltr) 118"
+    ].join("\n");
+    const r = parseDecklist(text);
+    assertEq(r.mainboard.length, 12);
+    assertEq(r.sideboard.length, 3);
+    // The real guard: no parsed name retains its set code or collector
+    // number. This catches the lowercase-set-code bug and any future
+    // regression in the same area.
+    for (const e of r.mainboard.concat(r.sideboard)) {
+      assert(e.name.indexOf("(") === -1, "name has no paren: " + e.name);
+    }
+    // And spot-check one specific card end to end.
+    const mountain = r.mainboard.find((e) => e.name === "Mountain");
+    assert(mountain, "Mountain parsed");
+    assertEq(mountain.count, 18);
+    assertEq(mountain.set, "thb");
   });
 
   test("ignores // comments and blank lines", () => {
@@ -299,6 +355,216 @@ suite("archetype: fallback", () => {
   });
   test("returns 'Untitled Deck' for null input", () => {
     assertEq(identifyDeck(null), "Untitled Deck");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// archetypes.json contract (see /docs/archetype-index-spec.md)
+// ---------------------------------------------------------------------------
+
+suite("archetype index: isValidArchetypeIndex", () => {
+  const valid = {
+    version: 1,
+    lastUpdated: "2026-09-25",
+    archetypes: [
+      {
+        key: "mono-red-madness",
+        name: "Mono Red Madness",
+        format: "Pauper",
+        guideCount: 3,
+        cardFrequency: [
+          { name: "Lightning Bolt", inclusion: 1.0, avgCopies: 4.0 }
+        ],
+        tags: ["budget"],
+        guides: [
+          { file: "a.json", author: "x", verified: false, lastEditedAt: "2026-09-24", overlapWithCore: 0.9 }
+        ]
+      }
+    ]
+  };
+
+  test("accepts a well-formed index", () => {
+    assert(isValidArchetypeIndex(valid), "should be valid");
+  });
+
+  test("rejects null and non-objects", () => {
+    assert(!isValidArchetypeIndex(null), "null");
+    assert(!isValidArchetypeIndex("string"), "string");
+    assert(!isValidArchetypeIndex(42), "number");
+  });
+
+  test("rejects wrong version", () => {
+    const bad = JSON.parse(JSON.stringify(valid));
+    bad.version = 99;
+    assert(!isValidArchetypeIndex(bad), "wrong version");
+  });
+
+  test("rejects missing archetypes array", () => {
+    assert(!isValidArchetypeIndex({ version: 1 }), "no archetypes");
+    assert(!isValidArchetypeIndex({ version: 1, archetypes: {} }), "archetypes not array");
+  });
+
+  test("rejects entry missing required fields", () => {
+    const clone = () => JSON.parse(JSON.stringify(valid));
+    const missingKey = clone(); delete missingKey.archetypes[0].key;
+    assert(!isValidArchetypeIndex(missingKey), "no key");
+
+    const missingName = clone(); delete missingName.archetypes[0].name;
+    assert(!isValidArchetypeIndex(missingName), "no name");
+
+    const missingFreq = clone(); delete missingFreq.archetypes[0].cardFrequency;
+    assert(!isValidArchetypeIndex(missingFreq), "no cardFrequency");
+
+    const missingGuides = clone(); delete missingGuides.archetypes[0].guides;
+    assert(!isValidArchetypeIndex(missingGuides), "no guides");
+  });
+
+  test("rejects malformed cardFrequency entry", () => {
+    const bad = JSON.parse(JSON.stringify(valid));
+    delete bad.archetypes[0].cardFrequency[0].inclusion;
+    assert(!isValidArchetypeIndex(bad), "missing inclusion");
+  });
+
+  test("rejects malformed guides entry", () => {
+    const bad = JSON.parse(JSON.stringify(valid));
+    delete bad.archetypes[0].guides[0].overlapWithCore;
+    assert(!isValidArchetypeIndex(bad), "missing overlapWithCore");
+  });
+
+  test("tolerates missing tags (older producer)", () => {
+    const noTags = JSON.parse(JSON.stringify(valid));
+    delete noTags.archetypes[0].tags;
+    assert(isValidArchetypeIndex(noTags), "tags optional");
+  });
+});
+
+suite("archetype index: hasUsableArchetypes", () => {
+  test("false for a single-guide bucket", () => {
+    const idx = {
+      version: 1,
+      archetypes: [
+        { key: "a", name: "A", format: "F", guideCount: 1,
+          cardFrequency: [], tags: [], guides: [] }
+      ]
+    };
+    assert(!hasUsableArchetypes(idx), "1 guide not usable");
+  });
+
+  test("true when any bucket has guideCount >= 2", () => {
+    const idx = {
+      version: 1,
+      archetypes: [
+        { key: "a", name: "A", format: "F", guideCount: 1,
+          cardFrequency: [], tags: [], guides: [] },
+        { key: "b", name: "B", format: "F", guideCount: 2,
+          cardFrequency: [], tags: [], guides: [] }
+      ]
+    };
+    assert(hasUsableArchetypes(idx), "2 guides usable");
+  });
+
+  test("false for a malformed index", () => {
+    assert(!hasUsableArchetypes(null), "null");
+    assert(!hasUsableArchetypes({ version: 99, archetypes: [] }), "bad version");
+    assert(!hasUsableArchetypes({ version: 1 }), "no archetypes");
+  });
+});
+
+suite("archetype index: listArchetypes export", () => {
+  test("is exported as a function", () => {
+    assert(typeof listArchetypes === "function", "listArchetypes is a function");
+  });
+  test("is async", () => {
+    // An async function's constructor name is "AsyncFunction".
+    assertEq(listArchetypes.constructor.name, "AsyncFunction");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseDek (.dek XML support)
+// ---------------------------------------------------------------------------
+
+// A representative MTGO .dek file: mainboard and sideboard <Cards>
+// elements, each with Quantity, Sideboard, and Name attributes.
+const SAMPLE_DEK = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">',
+  '  <NetDeckID>0</NetDeckID>',
+  '  <PreconstructedDeckID>0</PreconstructedDeckID>',
+  '  <Cards CatID="79626" Quantity="10" Sideboard="false" Name="Island" Annotation="0"/>',
+  '  <Cards CatID="72474" Quantity="4" Sideboard="false" Name="Faerie Seer" Annotation="0"/>',
+  '  <Cards CatID="48678" Quantity="4" Sideboard="false" Name="Spellstutter Sprite" Annotation="0"/>',
+  '  <Cards CatID="90957" Quantity="4" Sideboard="false" Name="Counterspell" Annotation="0"/>',
+  '  <Cards CatID="53118" Quantity="4" Sideboard="false" Name="Brainstorm" Annotation="0"/>',
+  '  <Cards CatID="60922" Quantity="4" Sideboard="true" Name="Hydroblast" Annotation="0"/>',
+  '  <Cards CatID="50159" Quantity="3" Sideboard="true" Name="Annul" Annotation="0"/>',
+  '  <Cards CatID="30896" Quantity="2" Sideboard="true" Name="Relic of Progenitus" Annotation="0"/>',
+  '</Deck>'
+].join("\n");
+
+suite("parseDek: structure", () => {
+  test("parses mainboard and sideboard from XML", () => {
+    const r = parseDek(SAMPLE_DEK);
+    assert(!r.error, "no error");
+    assertEq(r.mainboard.length, 5, "5 mainboard entries");
+    assertEq(r.sideboard.length, 3, "3 sideboard entries");
+  });
+
+  test("reads Name, Quantity, and Sideboard attributes", () => {
+    const r = parseDek(SAMPLE_DEK);
+    const island = r.mainboard.find((e) => e.name === "Island");
+    assert(island, "Island parsed");
+    assertEq(island.count, 10);
+    const hydro = r.sideboard.find((e) => e.name === "Hydroblast");
+    assert(hydro, "Hydroblast parsed");
+    assertEq(hydro.count, 4);
+  });
+
+  test("ignores attributes it does not need", () => {
+    const r = parseDek(SAMPLE_DEK);
+    // CatID and Annotation must not leak into the name.
+    for (const e of r.mainboard.concat(r.sideboard)) {
+      assert(e.name.indexOf("CatID") === -1, "no CatID in name");
+      assert(e.name.indexOf("=") === -1, "no attribute syntax in name");
+    }
+  });
+
+  test("empty input returns an error", () => {
+    const r = parseDek("");
+    assert(r.error, "error for empty input");
+  });
+
+  test("non-XML input returns an error", () => {
+    const r = parseDek("this is not xml");
+    assert(r.error, "error for non-XML");
+  });
+
+  test("XML with no Cards elements returns an error", () => {
+    const r = parseDek('<?xml version="1.0"?><Deck></Deck>');
+    assert(r.error, "error for no cards");
+  });
+});
+
+suite("toDecklistText", () => {
+  test("renders mainboard then a Sideboard section", () => {
+    const r = parseDek(SAMPLE_DEK);
+    const text = toDecklistText(r);
+    assert(text.indexOf("10 Island") !== -1, "mainboard line present");
+    assert(text.indexOf("Sideboard") !== -1, "sideboard header present");
+    assert(text.indexOf("4 Hydroblast") !== -1, "sideboard line present");
+  });
+
+  test("round-trips through parseDecklist", () => {
+    const r = parseDek(SAMPLE_DEK);
+    const text = toDecklistText(r);
+    const reparsed = parseDecklist(text);
+    assertEq(reparsed.mainboard.length, 5, "mainboard survives round trip");
+    assertEq(reparsed.sideboard.length, 3, "sideboard survives round trip");
+  });
+
+  test("omits the Sideboard header when there is no sideboard", () => {
+    const text = toDecklistText({ mainboard: [{ count: 4, name: "Bolt" }], sideboard: [] });
+    assert(text.indexOf("Sideboard") === -1, "no sideboard header");
   });
 });
 
