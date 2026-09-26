@@ -20,10 +20,13 @@ import ArchetypeView from "./ArchetypeView.js";
 const GuideLibrary = {
   mixins: [GuideListMixin],
   components: { ArchetypeView },
-  emits: ["load-share", "submit-guide"],
+  emits: ["load-share", "submit-guide", "go-build"],
   data() {
     return {
-      filterFormat: "all",
+      // Empty until the guide list loads; a watcher on `guides` then
+      // selects the most-populated format. There is no "all" option --
+      // Browse always shows one format at a time.
+      filterFormat: "",
       filterText: "",
       sourceOpen: false,
       // Archetype index state.
@@ -31,12 +34,32 @@ const GuideLibrary = {
       archetypeSource: "none",
       archetypeLoading: false,
       // null = "auto" (use archetype view iff usable); "flat" = forced flat.
-      viewOverride: null
+      viewOverride: null,
+      // Info modal explaining how to contribute a guide.
+      showSubmitInfo: false
     };
   },
-  mounted() {
-    this.refreshGuides();
-    this.refreshArchetypes();
+  watch: {
+    /**
+     * Keep filterFormat in sync with the available formats. On first
+     * load this selects the most-populated format (formats() is sorted
+     * by count descending). On a later refresh it preserves the current
+     * choice if that format still exists, and otherwise falls back to
+     * the top format. There is no "all" state: Browse always shows
+     * exactly one format.
+     */
+    guides: {
+      immediate: true,
+      handler(list) {
+        const available = (list || []).map((g) => g.format).filter(Boolean);
+        if (!available.length) return;
+        if (this.filterFormat && available.includes(this.filterFormat)) return;
+        // Pick the most-populated format. formats() is already sorted
+        // count-desc, so its first real entry is the top format.
+        const top = this.formats.find((f) => f.name !== "all");
+        this.filterFormat = top ? top.name : available[0];
+      }
+    }
   },
   computed: {
     formats() {
@@ -50,44 +73,59 @@ const GuideLibrary = {
       const list = Array.from(counts.entries())
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
         .map(([name, count]) => ({ name, count }));
-      return [{ name: "all", count: this.guides.length }, ...list];
+      // No "all" pseudo-format: Browse is always scoped to one format.
+      return list;
     },
     filtered() {
       const q = this.filterText.trim().toLowerCase();
       return this.guides.filter((g) => {
-        if (this.filterFormat !== "all" && g.format !== this.filterFormat) return false;
+        if (g.format !== this.filterFormat) return false;
         if (!q) return true;
         const hay = ((g.deckName || "") + " " + (g.archetype || "") + " " + (g.author || "")).toLowerCase();
         return hay.includes(q);
       });
     },
     hasFilters() {
-      return this.filterFormat !== "all" || this.filterText.trim().length > 0;
+      // The format tab is always a specific format now, so it does not
+      // count as a "filter" the user can clear -- only the search text.
+      return this.filterText.trim().length > 0;
     },
     /**
      * Whether the archetype view should be shown, taking the manual
      * override and the usability check into account.
      *
-     * Named `archetypeViewUsable` rather than `hasUsableArchetypes` to
-     * avoid colliding with the imported helper of that name. Note this is
-     * a computed: templates must reference it WITHOUT parentheses.
+     * Whether an archetype view is available for the CURRENTLY SELECTED
+     * format, independent of which view is showing. This is what the
+     * "By archetype" button's :disabled reads: the button should be
+     * clickable whenever the current format has a usable archetype, even
+     * if the user is presently on the flat list.
+     *
+     * Format-scoped on purpose: a format whose guides are all
+     * single-guide buckets (like Modern with one guide) has no usable
+     * archetype, so the view should fall back to the flat list rather
+     * than render an empty archetype list.
+     *
+     * This is a computed: templates must reference it WITHOUT parentheses.
      */
-    archetypeViewUsable() {
-      if (this.viewOverride === "flat") return false;
-      if (this.viewOverride === "archetype") return true;
-      return hasUsableArchetypes(this.archetypeIndex);
+    archetypeViewAvailable() {
+      return hasUsableArchetypes(this.filteredIndex);
     },
     /**
-     * Convenience computed for the template: true when the archetype view
-     * is currently active. Same value the toggle buttons read.
+     * Whether the archetype view is currently the active view, taking the
+     * manual override into account. This decides what renders, not whether
+     * the toggle is enabled. Falls back to false (flat list) when the
+     * current format has no usable archetype, so an empty archetype view
+     * is never shown.
      */
     showArchetypeView() {
-      return this.archetypeViewUsable;
+      if (!this.archetypeViewAvailable) return false;
+      if (this.viewOverride === "flat") return false;
+      if (this.viewOverride === "archetype") return true;
+      return true;
     },
     /**
-     * The index filtered down to the current format tab. When the user
-     * picks a format, only archetypes in that format are shown; when
-     * "all", every archetype is shown. Text search is not applied to
+     * The index filtered down to the current format tab. Only archetypes
+     * in the selected format are kept. Text search is not applied to
      * archetypes -- they are a small, named set and filtering them by
      * free text would only hide them confusingly.
      */
@@ -96,8 +134,7 @@ const GuideLibrary = {
         return { version: 1, archetypes: [] };
       }
       const list = this.archetypeIndex.archetypes.filter((a) => {
-        if (this.filterFormat !== "all" && a.format !== this.filterFormat) return false;
-        return true;
+        return a.format === this.filterFormat;
       });
       return Object.assign({}, this.archetypeIndex, { archetypes: list });
     }
@@ -136,7 +173,7 @@ const GuideLibrary = {
       this.viewOverride = this.viewOverride === mode ? null : mode;
     },
     clearFilters() {
-      this.filterFormat = "all";
+      // Only the search text is clearable; the format tab stays put.
       this.filterText = "";
     },
     formatClass(fmt) {
@@ -145,7 +182,36 @@ const GuideLibrary = {
     },
     toggleSource() {
       this.sourceOpen = !this.sourceOpen;
+    },
+    openSubmitInfo() {
+      this.showSubmitInfo = true;
+    },
+    closeSubmitInfo() {
+      this.showSubmitInfo = false;
+    },
+    onSubmitInfoOverlay(evt) {
+      if (evt.target === evt.currentTarget) this.closeSubmitInfo();
+    },
+    goToBuild() {
+      this.closeSubmitInfo();
+      this.$emit("go-build");
+    },
+    onSubmitInfoKey(evt) {
+      if (!this.showSubmitInfo) return;
+      if (evt.key === "Escape") this.closeSubmitInfo();
+    },
+    clearFilters() {
+      // Only the search text is clearable; the format tab stays put.
+      this.filterText = "";
     }
+  },
+  mounted() {
+    this.refreshGuides();
+    this.refreshArchetypes();
+    document.addEventListener("keydown", this.onSubmitInfoKey);
+  },
+  beforeUnmount() {
+    document.removeEventListener("keydown", this.onSubmitInfoKey);
   },
   template: `
     <section class="guide-library">
@@ -161,8 +227,8 @@ const GuideLibrary = {
           <button
             type="button"
             class="usa-button guide-library-submit"
-            @click="$emit('submit-guide')"
-            title="Submit the currently loaded guide"
+            @click="openSubmitInfo"
+            title="How to share your own guide"
           >Submit a guide</button>
         </div>
       </header>
@@ -210,12 +276,12 @@ const GuideLibrary = {
           type="button"
           class="guide-library-view-btn"
           :class="{ 'is-active': showArchetypeView }"
-          :disabled="!archetypeViewUsable"
+          :disabled="!archetypeViewAvailable"
           :aria-pressed="showArchetypeView ? 'true' : 'false'"
           @click="setViewOverride('archetype')"
-          :title="archetypeViewUsable
+          :title="archetypeViewAvailable
             ? 'Group guides by archetype'
-            : 'Archetype view appears once an archetype has more than one guide'"
+            : 'Archetype view appears once this format has an archetype with more than one guide'"
         >By archetype</button>
         <button
           type="button"
@@ -290,6 +356,57 @@ const GuideLibrary = {
           <strong>Submit</strong> button that opens a pull request in the community repository.
         </span>
       </footer>
+
+      <div
+        v-if="showSubmitInfo"
+        class="submit-info-overlay"
+        @click="onSubmitInfoOverlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="How to share your own guide"
+      >
+        <div class="submit-info-panel">
+          <header class="submit-info-header">
+            <h2>Share your own guide</h2>
+            <button
+              type="button"
+              class="submit-info-close"
+              @click="closeSubmitInfo"
+              aria-label="Close"
+              title="Close"
+            >&times;</button>
+          </header>
+
+          <div class="submit-info-body">
+            <p>
+              Building a guide is easy. Switch to <strong>Build</strong>, paste a
+              decklist, and add your matchups and your sideboarding plan &mdash;
+              which cards come in, and how many, against each opponent.
+            </p>
+            <p>
+              When you're done, click <strong>Submit</strong>. It asks you to sign in
+              with GitHub, then opens a pull request for review. Once a maintainer
+              approves it, your guide shows up here for everyone.
+            </p>
+            <p class="submit-info-note">
+              You keep the ability to update your own guide later.
+            </p>
+          </div>
+
+          <footer class="submit-info-actions">
+            <button
+              type="button"
+              class="usa-button"
+              @click="goToBuild"
+            >Go to Build</button>
+            <button
+              type="button"
+              class="usa-button usa-button--outline"
+              @click="closeSubmitInfo"
+            >Not now</button>
+          </footer>
+        </div>
+      </div>
     </section>
   `
 };

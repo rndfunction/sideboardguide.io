@@ -2782,6 +2782,183 @@ th.card-col:hover .card-preview-icon,
 }
 
 /* ============================================================
+   Submit-guide info modal (Browse): explains the contribution
+   flow in plain language and offers a jump to Build mode.
+   ============================================================ */
+
+.submit-info-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 2000;
+}
+
+.submit-info-panel {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  max-width: 32rem;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.submit-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.submit-info-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--site-text);
+}
+
+.submit-info-close {
+  background: transparent;
+  border: none;
+  color: var(--site-text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.submit-info-close:hover {
+  color: var(--site-text);
+}
+
+.submit-info-body {
+  padding: 1.1rem 1.25rem;
+  color: var(--site-text);
+}
+
+.submit-info-body p {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.submit-info-body strong {
+  color: var(--site-accent);
+}
+
+.submit-info-note {
+  color: var(--site-text-muted);
+  font-size: 0.85rem !important;
+}
+
+.submit-info-actions {
+  display: flex;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+/* ============================================================
+   Mode bar: the Build / Browse switch, promoted from a small
+   nav in the header corner to a full-width band directly under
+   the header. Build and Browse are the two things the site
+   does, so the switch is a primary navigation element, not an
+   afterthought.
+   ============================================================ */
+
+/* Segmented control: the two mode buttons join into one unit. The
+   gap is removed, the doubled border at the seam is collapsed, and
+   only the outer corners are rounded. */
+.mode-bar {
+  display: flex;
+  margin: 0 0 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.mode-bar-btn {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.7rem 1rem;
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 0;
+  color: var(--site-text-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+/* First and last button own the outer rounding; the seam between them
+   uses a negative margin so the two 1px borders overlap into one. */
+.mode-bar-btn:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.mode-bar-btn:last-child {
+  border-radius: 0 8px 8px 0;
+  margin-left: -1px;
+}
+
+.mode-bar-btn:hover:not(.is-active) {
+  background: var(--site-surface-alt);
+  color: var(--site-text);
+}
+
+/* Active button sits above its neighbour so its accent border is not
+   clipped by the seam overlap. */
+.mode-bar-btn.is-active {
+  position: relative;
+  z-index: 1;
+  background: var(--site-surface-hi);
+  border-color: var(--site-accent);
+  color: var(--site-text);
+}
+
+.mode-bar-btn:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+.mode-bar-label {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.mode-bar-btn.is-active .mode-bar-label {
+  color: var(--site-accent);
+}
+
+.mode-bar-hint {
+  font-size: 0.78rem;
+  color: var(--site-text-muted);
+}
+
+@media (max-width: 640px) {
+  /* Stacked: restore full rounding and remove the seam overlap. */
+  .mode-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .mode-bar-btn,
+  .mode-bar-btn:first-child,
+  .mode-bar-btn:last-child {
+    border-radius: 8px;
+    margin-left: 0;
+  }
+}
+
+/* ============================================================
    Archetype view (derived index) + By-archetype / All-guides
    toggle above the Guide library. See /docs/archetype-index-spec.md
    ============================================================ */

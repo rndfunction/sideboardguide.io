@@ -33,29 +33,39 @@
               <span class="site-title-text">Sideboard Guide Builder</span>
             </a>
           </h1>
-          <nav class="site-mode-nav" aria-label="App mode">
-            <button
-              type="button"
-              class="site-mode-btn"
-              :class="{ 'is-active': mode === 'build' }"
-              @click="setMode('build')"
-            >Build</button>
-            <button
-              type="button"
-              class="site-mode-btn"
-              :class="{ 'is-active': mode === 'browse' }"
-              @click="setMode('browse')"
-            >Browse</button>
-          </nav>
         </div>
         <p class="usa-intro">Paste a decklist. Build a sideboard guide. Print sleeve-sized cards for the deckbox.</p>
       </header>
+
+      <nav class="mode-bar" aria-label="App mode">
+        <button
+          type="button"
+          class="mode-bar-btn"
+          :class="{ 'is-active': mode === 'build' }"
+          :aria-pressed="mode === 'build' ? 'true' : 'false'"
+          @click="setMode('build')"
+        >
+          <span class="mode-bar-label">Build</span>
+          <span class="mode-bar-hint">Paste a decklist and make a guide</span>
+        </button>
+        <button
+          type="button"
+          class="mode-bar-btn"
+          :class="{ 'is-active': mode === 'browse' }"
+          :aria-pressed="mode === 'browse' ? 'true' : 'false'"
+          @click="setMode('browse')"
+        >
+          <span class="mode-bar-label">Browse</span>
+          <span class="mode-bar-hint">Guides shared by other players</span>
+        </button>
+      </nav>
 
       <!-- Browse mode replaces the workspace with the community guide library -->
       <guide-library
         v-if="mode === 'browse'"
         @load-share="onLoadSharedGuide"
         @submit-guide="onSubmitGuide"
+        @go-build="setMode('build')"
       ></guide-library>
 
       <div v-if="mode === 'build'" class="app-two-col" :class="{ 'app-two-col-loaded': enriched }">

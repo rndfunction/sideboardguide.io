@@ -42,21 +42,11 @@ const DeckInput = {
         "2 Tectonic Hazard"
       ].join("\n"),
       placeholder: [
-        "Paste a decklist. Examples:",
         "4 Lightning Bolt",
-        "4x Counterspell",
-        "2 Snapcaster Mage (ISD) 78",
+        "4 Counterspell",
         "",
         "Sideboard",
-        "3 Force of Will",
-        "2 Surgical Extraction",
-        "",
-        "Or use the MTGGoldfish style (blank line before sideboard):",
-        "4 Elvish Mystic",
-        "9 Forest",
-        "",
-        "3 Faerie Macabre",
-        "3 Gnaw to the Bone"
+        "3 Force of Will"
       ].join("\n")
     };
   },
@@ -237,7 +227,7 @@ const DeckInput = {
       <div v-else>
         <label class="usa-label" for="decklist-input">Decklist</label>
         <p class="usa-hint" style="margin-top:0;">
-          Paste or upload a decklist. Separate maindeck from sideboard with a blank line, or with a "Sideboard" header.
+          Paste or upload a decklist.
         </p>
 
         <div class="deck-input-grid">
