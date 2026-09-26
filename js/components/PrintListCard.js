@@ -3,6 +3,8 @@
 // Each section is a two-column list of "N Card Name" rows, balanced by row count.
 // Black on white, no images.
 
+import { truncateCardName } from "../card-utils.js";
+
 const PrintListCard = {
   props: {
     deckName: { type: String, default: "Untitled Deck" },
@@ -44,12 +46,9 @@ const PrintListCard = {
   },
   methods: {
     shortName(name) {
-      // Hard-cut long names rather than adding an ellipsis. Every character
-      // on a small card is precious, and readers don't need the "..." to
-      // recognize a truncated card name.
-      if (!name) return "";
-      if (name.length <= 28) return name;
-      return name.slice(0, 28);
+      // Inventory cards have room for slightly more characters than the
+      // matchup guide (28 vs 26).
+      return truncateCardName(name, 28);
     }
   },
   template: `

@@ -128,18 +128,20 @@ export function storeToken(token) {
   } catch (_) {}
 }
 
+// ---------------------------------------------------------------------------
+// Authenticated user lookup (for attribution on submissions)
+// ---------------------------------------------------------------------------
+
+// Declared BEFORE clearToken() so clearToken() does not hit the temporal
+// dead zone when it references this constant.
+const USER_STORAGE_KEY = "mtg-deck-guide:gh-user";
+
 export function clearToken() {
   try {
     sessionStorage.removeItem(TOKEN_STORAGE_KEY);
     sessionStorage.removeItem(USER_STORAGE_KEY);
   } catch (_) {}
 }
-
-// ---------------------------------------------------------------------------
-// Authenticated user lookup (for attribution on submissions)
-// ---------------------------------------------------------------------------
-
-const USER_STORAGE_KEY = "mtg-deck-guide:gh-user";
 
 /**
  * Fetch the authenticated user from GitHub. Caches the result in
@@ -186,12 +188,21 @@ export async function fetchUser(token) {
 }
 
 /**
- * Debug helper: expose fetchUser on window so it can be called from the
- * console with the current token. Only used during development.
+ * Debug helpers: expose fetchUser / getStoredToken on window so they can be
+ * called from the console during development. Gated on localhost so a
+ * production page does not hand any script on the page a way to read the
+ * stored OAuth token.
  */
 if (typeof window !== "undefined") {
-  window.__fetchUser = fetchUser;
-  window.__getStoredToken = getStoredToken;
+  const isLocalhost =
+    window.location &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.hostname === "[::1]");
+  if (isLocalhost) {
+    window.__fetchUser = fetchUser;
+    window.__getStoredToken = getStoredToken;
+  }
 }
 
 function sleep(ms) {

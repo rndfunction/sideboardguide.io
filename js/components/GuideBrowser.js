@@ -1,27 +1,27 @@
 // GuideBrowser: a modal listing community guides fetched from the
 // SideboardGuides repo. Clicking Load fetches the guide JSON and emits
 // it upward for the app to apply.
+//
+// Data loading (list + open + source label) is shared with GuideLibrary
+// via GuideListMixin so the two views can never drift.
 
-import { listGuides, loadGuide, GUIDES_BASE_URL } from "../guides.js";
+import { GUIDES_BASE_URL } from "../guides.js";
+import { GuideListMixin } from "../guides-list.js";
 
 const GuideBrowser = {
+  mixins: [GuideListMixin],
   props: {
     open: { type: Boolean, default: false }
   },
   emits: ["close", "load-share"],
   data() {
     return {
-      loading: false,
-      error: "",
-      guides: [],
-      source: null, // "remote" | "local" | null
-      loadingFile: null,
       baseUrl: GUIDES_BASE_URL
     };
   },
   watch: {
     open(newVal) {
-      if (newVal) this.refresh();
+      if (newVal) this.refreshGuides();
     }
   },
   mounted() {
@@ -31,38 +31,8 @@ const GuideBrowser = {
     document.removeEventListener("keydown", this.onKey);
   },
   methods: {
-    async refresh() {
-      this.loading = true;
-      this.error = "";
-      try {
-        const result = await listGuides();
-        this.guides = result.guides || [];
-        this.source = result.source;
-        if (!this.guides.length) {
-          this.error = "No community guides found.";
-        }
-      } catch (err) {
-        this.error = "Could not load guides list: " + String(err.message || err);
-      } finally {
-        this.loading = false;
-      }
-    },
-    async onLoad(file) {
-      if (this.loadingFile) return;
-      this.loadingFile = file;
-      this.error = "";
-      try {
-        const payload = await loadGuide(file);
-        if (!payload || payload.format !== "mtg-sideboard-guide") {
-          throw new Error("That file is not a valid guide.");
-        }
-        this.$emit("load-share", payload);
-        this.$emit("close");
-      } catch (err) {
-        this.error = "Could not load guide: " + String(err.message || err);
-      } finally {
-        this.loadingFile = null;
-      }
+    onLoad(file) {
+      return this.openGuide(file, this.$emit.bind(this));
     },
     onClose() {
       this.$emit("close");
@@ -73,12 +43,6 @@ const GuideBrowser = {
     onKey(evt) {
       if (!this.open) return;
       if (evt.key === "Escape") this.onClose();
-    },
-    sourceLabel() {
-      if (this.source === "remote") return "Loaded from github.com/rndfunction/SideboardGuides";
-      if (this.source === "local") return "Loaded from the app's local mirror (remote unavailable)";
-      if (this.source === "fallback") return "Showing built-in sample guides (remote and local fetches unavailable)";
-      return "";
     }
   },
   template: `

@@ -66,35 +66,37 @@ const FALLBACK_GUIDE_BODIES = {
         rawText: rawDeck
       },
       matchups: ["Murktide", "Amulet Titan", "Rhinos"],
+      // Plan keys are section-aware: name + "@main" | name + "@side".
+      // Matches what store.js writes and what DeckGrid/PrintView read.
       plan: {
-        "Searing Blaze": {
+        "Searing Blaze@main": {
           "Murktide": { dir: "out", count: 3 },
           "Amulet Titan": { dir: "out", count: 2 },
           "Rhinos": { dir: "out", count: 1 }
         },
-        "Skewer the Critics": {
+        "Skewer the Critics@main": {
           "Murktide": { dir: "out", count: 2 }
         },
-        "Monastery Swiftspear": {
+        "Monastery Swiftspear@main": {
           "Amulet Titan": { dir: "out", count: 4 }
         },
-        "Eidolon of the Great Revel": {
+        "Eidolon of the Great Revel@main": {
           "Rhinos": { dir: "out", count: 3 }
         },
-        "Roiling Vortex": {
+        "Roiling Vortex@side": {
           "Murktide": { dir: "in", count: 3 }
         },
-        "Blood Moon": {
+        "Blood Moon@side": {
           "Murktide": { dir: "in", count: 2 },
           "Amulet Titan": { dir: "in", count: 3 }
         },
-        "Deflecting Palm": {
+        "Deflecting Palm@side": {
           "Amulet Titan": { dir: "in", count: 3 }
         },
-        "Anger of the Gods": {
+        "Anger of the Gods@side": {
           "Rhinos": { dir: "in", count: 3 }
         },
-        "Skullcrack": {
+        "Skullcrack@side": {
           "Rhinos": { dir: "in", count: 1 }
         }
       },
@@ -188,6 +190,10 @@ const SUBMIT_THROTTLE_MS = 30 * 1000; // client-side politeness, not security
 
 /**
  * Turn a deckName into a safe filename slug. Always ends with .json.
+ *
+ * Includes a UTC timestamp down to the second AND a short random suffix
+ * so two submissions of the same deck within the same second do not
+ * collide on the server side.
  */
 export function suggestFilename(deckName) {
   const base = String(deckName || "untitled-guide")
@@ -195,8 +201,6 @@ export function suggestFilename(deckName) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60) || "untitled-guide";
-  // Add a short timestamp suffix so files don't collide when multiple
-  // submissions of the same deck arrive.
   const now = new Date();
   const stamp =
     now.getUTCFullYear() +
@@ -205,7 +209,15 @@ export function suggestFilename(deckName) {
     String(now.getUTCHours()).padStart(2, "0") +
     String(now.getUTCMinutes()).padStart(2, "0") +
     String(now.getUTCSeconds()).padStart(2, "0");
-  return base + "-" + stamp + ".json";
+  // 4 hex chars from crypto.randomUUID when available, else Math.random.
+  let rand;
+  try {
+    rand = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "").slice(0, 4)
+                              : Math.random().toString(16).slice(2, 6));
+  } catch (_) {
+    rand = Math.random().toString(16).slice(2, 6);
+  }
+  return base + "-" + stamp + "-" + rand + ".json";
 }
 
 /**
@@ -223,14 +235,20 @@ export async function submitGuide(payload, filename, meta, token) {
 
   // Client-side throttle to prevent accidental double-clicks. Real
   // anti-abuse lives server-side in the GitHub Action.
+  //
+  // Read the last-submit timestamp in a try/catch because localStorage
+  // can throw in some privacy modes. Then enforce the throttle OUTSIDE
+  // the try so a genuine "Please wait" error is not accidentally
+  // swallowed by the storage guard.
+  let lastSubmit = 0;
   try {
-    const last = parseInt(localStorage.getItem(SUBMIT_THROTTLE_KEY) || "0", 10);
-    if (last && Date.now() - last < SUBMIT_THROTTLE_MS) {
-      const wait = Math.ceil((SUBMIT_THROTTLE_MS - (Date.now() - last)) / 1000);
-      throw new Error("Please wait " + wait + " second" + (wait === 1 ? "" : "s") + " before submitting again.");
-    }
-  } catch (e) {
-    if (e && e.message && e.message.indexOf("Please wait") === 0) throw e;
+    lastSubmit = parseInt(localStorage.getItem(SUBMIT_THROTTLE_KEY) || "0", 10) || 0;
+  } catch (_) {
+    lastSubmit = 0;
+  }
+  if (lastSubmit && Date.now() - lastSubmit < SUBMIT_THROTTLE_MS) {
+    const wait = Math.ceil((SUBMIT_THROTTLE_MS - (Date.now() - lastSubmit)) / 1000);
+    throw new Error("Please wait " + wait + " second" + (wait === 1 ? "" : "s") + " before submitting again.");
   }
 
   const body = {

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sideboard Guide Builder &mdash; Tests</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #22242c; color: #ebe7df; margin: 0; padding: 24px; }
+  h1 { color: #c8804a; margin-top: 0; font-size: 1.4rem; }
+  .summary { font-size: 1.1rem; margin: 12px 0 24px; padding: 12px 16px; border-radius: 6px; background: #2c2f38; border-left: 4px solid #4a5062; }
+  .summary.ok { border-left-color: #4a8a4a; }
+  .summary.bad { border-left-color: #d9462b; }
+  .suite { margin-bottom: 20px; }
+  .suite-name { font-weight: 700; color: #a9a597; margin-bottom: 6px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .test { padding: 6px 12px; margin: 3px 0; border-radius: 4px; background: #2c2f38; border-left: 3px solid #4a5062; font-size: 0.9rem; }
+  .test.ok { border-left-color: #4a8a4a; }
+  .test.bad { border-left-color: #d9462b; background: #342c2c; }
+  .test-msg { color: #d9462b; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.8rem; margin-top: 4px; white-space: pre-wrap; }
+  .run-again { background: #c8804a; color: #1a1a1a; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; margin-bottom: 16px; }
+  .run-again:hover { background: #d99163; }
+</style>
+</head>
+<body>
+<h1>Sideboard Guide Builder &mdash; Tests</h1>
+<p>Open this page over HTTP (e.g. <code>python3 -m http.server 8000</code>, then <code>http://localhost:8000/tests.html</code>).</p>
+<button class="run-again" id="run">Run again</button>
+<div id="summary" class="summary">Loading...</div>
+<div id="results"></div>
+
+<script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
+<script type="module">
+  import { runAll } from "./js/tests.js";
+
+  function render(results) {
+    const passed = results.filter((r) => r.ok).length;
+    const total = results.length;
+    const sum = document.getElementById("summary");
+    sum.textContent = passed + " / " + total + " passed";
+    sum.className = "summary " + (passed === total ? "ok" : "bad");
+
+    const grouped = new Map();
+    for (const r of results) {
+      if (!grouped.has(r.suite)) grouped.set(r.suite, []);
+      grouped.get(r.suite).push(r);
+    }
+    const out = document.getElementById("results");
+    out.innerHTML = "";
+    for (const [suiteName, tests] of grouped) {
+      const sec = document.createElement("div");
+      sec.className = "suite";
+      const h = document.createElement("div");
+      h.className = "suite-name";
+      h.textContent = suiteName;
+      sec.appendChild(h);
+      for (const t of tests) {
+        const el = document.createElement("div");
+        el.className = "test " + (t.ok ? "ok" : "bad");
+        el.textContent = (t.ok ? "\u2713 " : "\u2717 ") + t.name;
+        if (!t.ok && t.message) {
+          const m = document.createElement("div");
+          m.className = "test-msg";
+          m.textContent = t.message;
+          el.appendChild(m);
+        }
+        sec.appendChild(el);
+      }
+      out.appendChild(sec);
+    }
+  }
+
+  async function run() {
+    document.getElementById("summary").textContent = "Running...";
+    document.getElementById("results").innerHTML = "";
+    const results = await runAll();
+    window.__testsResults = results;
+    render(results);
+  }
+
+  document.getElementById("run").addEventListener("click", run);
+  window.__runTests = run;
+  run();
+</script>
+</body>
+</html>

@@ -1,25 +1,24 @@
 // GuideLibrary: a full-page browse view of community guides.
 // Card-showroom styling (Direction A): format tabs at the top, colored
 // format pills on cards, arrow-chip buttons, prominent empty states.
+//
+// Data loading (list + open + source label) is shared with GuideBrowser
+// via GuideListMixin so the two views can never drift.
 
-import { listGuides, loadGuide } from "../guides.js";
+import { GuideListMixin } from "../guides-list.js";
 
 const GuideLibrary = {
+  mixins: [GuideListMixin],
   emits: ["load-share", "submit-guide"],
   data() {
     return {
-      loading: false,
-      error: "",
-      guides: [],
-      source: null,
-      loadingFile: null,
       filterFormat: "all",
       filterText: "",
       sourceOpen: false
     };
   },
   mounted() {
-    this.refresh();
+    this.refreshGuides();
   },
   computed: {
     formats() {
@@ -46,43 +45,11 @@ const GuideLibrary = {
     },
     hasFilters() {
       return this.filterFormat !== "all" || this.filterText.trim().length > 0;
-    },
-    sourceLabel() {
-      if (this.source === "remote") return "Loaded from github.com/rndfunction/SideboardGuides";
-      if (this.source === "local") return "Loaded from the app's local mirror (remote unavailable here)";
-      if (this.source === "fallback") return "Showing built-in sample guides";
-      return "";
     }
   },
   methods: {
-    async refresh() {
-      this.loading = true;
-      this.error = "";
-      try {
-        const result = await listGuides();
-        this.guides = result.guides || [];
-        this.source = result.source;
-      } catch (err) {
-        this.error = "Could not load guides: " + String(err.message || err);
-      } finally {
-        this.loading = false;
-      }
-    },
-    async onOpen(file) {
-      if (this.loadingFile) return;
-      this.loadingFile = file;
-      this.error = "";
-      try {
-        const payload = await loadGuide(file);
-        if (!payload || payload.format !== "mtg-sideboard-guide") {
-          throw new Error("Not a valid guide file.");
-        }
-        this.$emit("load-share", payload);
-      } catch (err) {
-        this.error = "Could not load guide: " + String(err.message || err);
-      } finally {
-        this.loadingFile = null;
-      }
+    onOpen(file) {
+      return this.openGuide(file, this.$emit.bind(this));
     },
     clearFilters() {
       this.filterFormat = "all";
@@ -161,7 +128,7 @@ const GuideLibrary = {
 
       <div v-else-if="error" class="guide-library-status guide-library-error">
         <p>{{ error }}</p>
-        <button type="button" class="usa-button usa-button--outline" @click="refresh">Try again</button>
+        <button type="button" class="usa-button usa-button--outline" @click="refreshGuides">Try again</button>
       </div>
 
       <div v-else-if="!filtered.length" class="guide-library-status">

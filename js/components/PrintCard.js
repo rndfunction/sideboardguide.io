@@ -1,6 +1,8 @@
 // PrintCard: renders a single sleeve-sized sideboard guide card.
 // Black on white. No images. Sized to fit a standard sleeve at print scale.
 
+import { truncateCardName } from "../card-utils.js";
+
 const PrintCard = {
   props: {
     deckName: { type: String, default: "Untitled Deck" },
@@ -36,12 +38,7 @@ const PrintCard = {
       return entry.dir === "in" ? "pc-in" : "pc-out";
     },
     shortName(name) {
-      // Hard-cut long names rather than adding an ellipsis. Every character
-      // on a small card is precious, and readers don't need the "..." to
-      // recognize a truncated card name.
-      if (!name) return "";
-      if (name.length <= 26) return name;
-      return name.slice(0, 26);
+      return truncateCardName(name, 26);
     },
     rowKey(row) {
       return row.name;

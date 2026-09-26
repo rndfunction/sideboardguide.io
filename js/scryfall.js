@@ -173,11 +173,22 @@ export async function lookupCards(names, onProgress) {
   return result;
 }
 
-function clearCache() {
-  const keys = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith(CACHE_PREFIX)) keys.push(k);
+/**
+ * Remove every cached card entry from localStorage. Exported so the app
+ * can offer a "clear card cache" affordance later (and so the dev
+ * console can call it). Safe to call when localStorage is unavailable —
+ * all errors are swallowed.
+ */
+export function clearCache() {
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(CACHE_PREFIX)) keys.push(k);
+    }
+    for (const k of keys) localStorage.removeItem(k);
+    return keys.length;
+  } catch (_) {
+    return 0;
   }
-  for (const k of keys) localStorage.removeItem(k);
 }

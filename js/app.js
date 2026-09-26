@@ -21,7 +21,8 @@ import {
   renameMatchup,
   setDeckName,
   cycleCard,
-  setCardPlan
+  setCardPlan,
+  normalizePlanKeys
 } from "./store.js";
 import { getLastFormat } from "./persistence.js";
 
@@ -30,10 +31,18 @@ if (!Vue || typeof Vue.createApp !== "function") {
   throw new Error("Vue global not found. Ensure /index.html loads vue.global.prod.js before /js/app.js.");
 }
 
-// Expose the reactive store on window for debugging. This is read-only
-// usage — nothing in the app writes to window.__store. Safe to leave in
-// production; it's just a global reference.
-window.__store = store;
+// Expose the reactive store on window for debugging, but only on
+// localhost. On a public origin, any third-party script would otherwise
+// get a live handle to the entire app state.
+if (
+  typeof window !== "undefined" &&
+  window.location &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname === "[::1]")
+) {
+  window.__store = store;
+}
 
 const app = Vue.createApp({
   data() {
@@ -98,7 +107,14 @@ const app = Vue.createApp({
         store.matchups = share.matchups.slice();
       }
       if (share.plan && typeof share.plan === "object") {
-        store.plan = JSON.parse(JSON.stringify(share.plan));
+        // Imported guides may carry legacy name-only plan keys (no
+        // "@main"/"@side" suffix) — notably the two bundled guides and
+        // any file merged under the old schema. Normalize against the
+        // just-enriched deck so the grid can find the entries. This is
+        // the import-path counterpart to the migration that runs inside
+        // loadDecklist().
+        const cloned = JSON.parse(JSON.stringify(share.plan));
+        store.plan = normalizePlanKeys(cloned, store.enriched);
       }
       if (deck.name) {
         store.deckName = deck.name;
@@ -150,8 +166,9 @@ const app = Vue.createApp({
      */
     planEntryCount() {
       let count = 0;
-      for (const key of Object.keys(store.plan)) {
-        const cardPlan = store.plan[key];
+      const plan = store.plan || {};
+      for (const key of Object.keys(plan)) {
+        const cardPlan = plan[key];
         if (!cardPlan) continue;
         for (const matchup of Object.keys(cardPlan)) {
           if (cardPlan[matchup]) count++;
@@ -176,13 +193,21 @@ const app = Vue.createApp({
         return;
       }
 
+      // Include the title-card preferences so a round-trip through the
+      // share format preserves the user's customization. Without these
+      // the fields serialize as null and every reload resets the cover.
       const payload = buildSharePayload({
         deckName: store.deckName,
         format: this.selectedFormat,
         archetype: store.deckName,
         rawText: store.rawText,
         matchups: store.matchups,
-        plan: store.plan
+        plan: store.plan,
+        titleColor: store.titleColor || null,
+        titleFontKey: store.titleFontKey || null,
+        titleSymbol: store.titleSymbol || null,
+        titleTexture: store.titleTexture || null,
+        titleTextureIntensity: store.titleTextureIntensity || null
       });
       const filename = suggestFilename(store.deckName);
       const token = getStoredToken();

@@ -15,65 +15,32 @@
     "Dimir Control"
   ],
   "plan": {
-    "Fireblast": {
-      "Mono U Faeries": {
-        "dir": "out",
-        "count": 3
-      },
-      "Tron": {
-        "dir": "out",
-        "count": 3
-      },
-      "Dimir Control": {
-        "dir": "out",
-        "count": 3
-      }
+    "Fireblast@main": {
+      "Mono U Faeries": { "dir": "out", "count": 3 },
+      "Tron": { "dir": "out", "count": 3 },
+      "Dimir Control": { "dir": "out", "count": 3 }
     },
-    "Grab the Prize": {
-      "Mono U Faeries": {
-        "dir": "out",
-        "count": 1
-      }
+    "Grab the Prize@main": {
+      "Mono U Faeries": { "dir": "out", "count": 1 }
     },
-    "Lava Dart": {
-      "Dimir Control": {
-        "dir": "out",
-        "count": 2
-      }
+    "Lava Dart@main": {
+      "Dimir Control": { "dir": "out", "count": 2 }
     },
-    "Sazacap's Brew": {
-      "Dimir Control": {
-        "dir": "out",
-        "count": 1
-      }
+    "Sazacap's Brew@main": {
+      "Dimir Control": { "dir": "out", "count": 1 }
     },
-    "Pyroblast": {
-      "Mono U Faeries": {
-        "dir": "in",
-        "count": 4
-      },
-      "Dimir Control": {
-        "dir": "in",
-        "count": 4
-      }
+    "Pyroblast@side": {
+      "Mono U Faeries": { "dir": "in", "count": 4 },
+      "Dimir Control": { "dir": "in", "count": 4 }
     },
-    "Cleansing Wildfire": {
-      "Tron": {
-        "dir": "in",
-        "count": 3
-      }
+    "Cleansing Wildfire@side": {
+      "Tron": { "dir": "in", "count": 3 }
     },
-    "Red Elemental Blast": {
-      "Dimir Control": {
-        "dir": "in",
-        "count": 1
-      }
+    "Red Elemental Blast@side": {
+      "Dimir Control": { "dir": "in", "count": 1 }
     },
-    "Crimson Fleet Commodore": {
-      "Dimir Control": {
-        "dir": "in",
-        "count": 1
-      }
+    "Crimson Fleet Commodore@side": {
+      "Dimir Control": { "dir": "in", "count": 1 }
     }
   },
   "titleCard": {

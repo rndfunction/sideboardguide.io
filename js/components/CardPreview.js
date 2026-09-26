@@ -6,6 +6,9 @@ import { store } from "../store.js";
 
 const OFFSET = 18;      // px away from the cursor
 const PREVIEW_W = 240;  // px wide preview
+// MTG cards are 63mm x 88mm, so height / width is ~1.397. Round up a
+// touch so the flip logic has a bit of headroom.
+const PREVIEW_H_RATIO = 1.4;
 
 const CardPreview = {
   computed: {
@@ -25,7 +28,7 @@ const CardPreview = {
       const viewH = window.innerHeight;
       // Flip horizontally if too close to the right edge.
       const w = PREVIEW_W;
-      const h = PREVIEW_W * 1.4; // rough aspect ratio (MTG card 88:61)
+      const h = PREVIEW_W * PREVIEW_H_RATIO;
       let left = pos.x + OFFSET;
       let top = pos.y + OFFSET;
       if (left + w > viewW - 8) left = pos.x - w - OFFSET;

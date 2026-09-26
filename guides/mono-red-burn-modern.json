@@ -15,71 +15,35 @@
     "Rhinos"
   ],
   "plan": {
-    "Searing Blaze": {
-      "Murktide": {
-        "dir": "out",
-        "count": 3
-      },
-      "Amulet Titan": {
-        "dir": "out",
-        "count": 2
-      },
-      "Rhinos": {
-        "dir": "out",
-        "count": 1
-      }
+    "Searing Blaze@main": {
+      "Murktide": { "dir": "out", "count": 3 },
+      "Amulet Titan": { "dir": "out", "count": 2 },
+      "Rhinos": { "dir": "out", "count": 1 }
     },
-    "Skewer the Critics": {
-      "Murktide": {
-        "dir": "out",
-        "count": 2
-      }
+    "Skewer the Critics@main": {
+      "Murktide": { "dir": "out", "count": 2 }
     },
-    "Monastery Swiftspear": {
-      "Amulet Titan": {
-        "dir": "out",
-        "count": 4
-      }
+    "Monastery Swiftspear@main": {
+      "Amulet Titan": { "dir": "out", "count": 4 }
     },
-    "Eidolon of the Great Revel": {
-      "Rhinos": {
-        "dir": "out",
-        "count": 3
-      }
+    "Eidolon of the Great Revel@main": {
+      "Rhinos": { "dir": "out", "count": 3 }
     },
-    "Roiling Vortex": {
-      "Murktide": {
-        "dir": "in",
-        "count": 3
-      }
+    "Roiling Vortex@side": {
+      "Murktide": { "dir": "in", "count": 3 }
     },
-    "Blood Moon": {
-      "Murktide": {
-        "dir": "in",
-        "count": 2
-      },
-      "Amulet Titan": {
-        "dir": "in",
-        "count": 3
-      }
+    "Blood Moon@side": {
+      "Murktide": { "dir": "in", "count": 2 },
+      "Amulet Titan": { "dir": "in", "count": 3 }
     },
-    "Deflecting Palm": {
-      "Amulet Titan": {
-        "dir": "in",
-        "count": 3
-      }
+    "Deflecting Palm@side": {
+      "Amulet Titan": { "dir": "in", "count": 3 }
     },
-    "Anger of the Gods": {
-      "Rhinos": {
-        "dir": "in",
-        "count": 3
-      }
+    "Anger of the Gods@side": {
+      "Rhinos": { "dir": "in", "count": 3 }
     },
-    "Skullcrack": {
-      "Rhinos": {
-        "dir": "in",
-        "count": 1
-      }
+    "Skullcrack@side": {
+      "Rhinos": { "dir": "in", "count": 1 }
     }
   },
   "titleCard": {

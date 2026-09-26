@@ -178,24 +178,56 @@ function ensurePlanEntries(enriched) {
 }
 
 /**
- * One-shot migration: rewrite any old (name-only) plan keys into the new
- * section-aware format. If a card exists in both sections, the old entry
- * is duplicated into both so the user can then adjust independently.
+ * Pure helper: given a plan object (possibly with legacy name-only keys)
+ * and an enriched deck, return a NEW plan object with section-aware keys.
  *
- * Runs on every deck load. Cheap (a few object key traversals) and
- * idempotent — keys already ending in "@main" or "@side" are skipped.
+ * If a card exists in both sections, the legacy entry is duplicated into
+ * both the "@main" and "@side" variants so each copy can be adjusted
+ * independently after import. Keys already ending in "@main" or "@side"
+ * are passed through untouched. Input is never mutated.
+ *
+ * This is the imported-share counterpart to migratePlanKeys(); the two
+ * share the same key-shape contract but this one has no store side
+ * effects, so it can be called from onImportShare without racing the
+ * reactive state.
+ */
+export function normalizePlanKeys(plan, enriched) {
+  const src = plan && typeof plan === "object" ? plan : {};
+  if (!enriched) {
+    // No deck context to disambiguate sections: pass through unchanged.
+    return JSON.parse(JSON.stringify(src));
+  }
+  const inMain = new Set((enriched.mainboard || []).map((e) => e.name));
+  const inSide = new Set((enriched.sideboard || []).map((e) => e.name));
+  const out = {};
+  for (const key of Object.keys(src)) {
+    const data = src[key];
+    if (/@(main|side)$/.test(key)) {
+      out[key] = { ...data };
+      continue;
+    }
+    let placed = false;
+    if (inMain.has(key)) { out[key + "@main"] = { ...data }; placed = true; }
+    if (inSide.has(key)) { out[key + "@side"] = { ...data }; placed = true; }
+    // If the card isn't in either section (stale entry), drop it silently
+    // rather than inventing a section for it.
+    if (!placed) continue;
+  }
+  return out;
+}
+
+/**
+ * One-shot migration: rewrite any old (name-only) plan keys into the new
+ * section-aware format, IN PLACE on store.plan.
+ *
+ * Delegates to normalizePlanKeys() for the actual rewrite so the two
+ * paths can never drift. Runs on every deck load. Cheap (a few object
+ * key traversals) and idempotent — keys already ending in "@main" or
+ * "@side" are skipped.
  */
 function migratePlanKeys() {
   if (!store.enriched) return;
-  const inMain = new Set(store.enriched.mainboard.map((e) => e.name));
-  const inSide = new Set(store.enriched.sideboard.map((e) => e.name));
-  const oldKeys = Object.keys(store.plan).filter((k) => !/@(main|side)$/.test(k));
-  for (const oldName of oldKeys) {
-    const data = store.plan[oldName];
-    if (inMain.has(oldName)) store.plan[oldName + "@main"] = { ...data };
-    if (inSide.has(oldName)) store.plan[oldName + "@side"] = { ...data };
-    delete store.plan[oldName];
-  }
+  store.plan = normalizePlanKeys(store.plan, store.enriched);
 }
 
 /**
