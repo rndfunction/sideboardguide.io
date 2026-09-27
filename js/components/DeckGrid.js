@@ -81,6 +81,16 @@ const DeckGrid = {
           this.selectedMatchup = list[0];
         }
       }
+    },
+    // Mirror the resolved active matchup into the store so other
+    // components (the mana curve) can read which matchup is being
+    // planned. Immediate so it populates on mount, and it re-fires when
+    // the matchup list or the selection changes.
+    activeMatchup: {
+      immediate: true,
+      handler(name) {
+        store.activeMatchup = name || null;
+      }
     }
   },
   computed: {
@@ -114,18 +124,6 @@ const DeckGrid = {
       return this.selectedMatchup && this.matchups.includes(this.selectedMatchup)
         ? this.selectedMatchup
         : this.matchups[0];
-    }
-  },
-  watch: {
-    // Mirror the resolved active matchup into the store so other
-    // components (the mana curve) can read which matchup is being
-    // planned. Immediate so it populates on mount, and it re-fires when
-    // the matchup list or the selection changes.
-    activeMatchup: {
-      immediate: true,
-      handler(name) {
-        store.activeMatchup = name || null;
-      }
     }
   },
   mounted() {
