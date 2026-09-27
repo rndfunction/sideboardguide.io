@@ -8,7 +8,12 @@ const DeckInput = {
   props: {
     parsed: { type: Object, default: null },
     loading: { type: Boolean, default: false },
-    error: { type: String, default: null }
+    error: { type: String, default: null },
+    // The current decklist text from the store. Used to populate the
+    // textarea when a deck is loaded from elsewhere (e.g. Browse or the
+    // example), so "Edit decklist" shows the loaded list rather than an
+    // empty box.
+    rawText: { type: String, default: "" }
   },
   emits: ["parse", "reset", "load-example"],
   data() {
@@ -86,6 +91,19 @@ const DeckInput = {
       handler(val) {
         const has = !!(val && val.mainboard && val.mainboard.length);
         if (has) this.expanded = false;
+      }
+    },
+    // Keep the textarea in sync with the loaded decklist. When a guide is
+    // loaded from Browse or the example, the store's rawText is set but
+    // the component's local text is not, which left "Edit decklist" with
+    // an empty box. Populate text when rawText arrives and differs from
+    // what's shown. immediate so mounting with an existing deck fills it.
+    rawText: {
+      immediate: true,
+      handler(val) {
+        if (typeof val === "string" && val && val !== this.text) {
+          this.text = val;
+        }
       }
     }
   },

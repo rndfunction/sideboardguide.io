@@ -1305,6 +1305,35 @@ table.guide-table tr.section-row td {
   margin-top: 0.6rem;
 }
 
+/* Status dot on each matchup tab: shows whether the plan is untouched,
+   balanced, off (deck grows), or illegal (deck shrinks). */
+.matchup-tab-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--site-border);
+}
+.matchup-tab-dot.tab-empty {
+  background: transparent;
+  border-color: var(--site-border);
+}
+.matchup-tab-dot.tab-ok {
+  background: #4a8a4a;
+  border-color: #4a8a4a;
+}
+.matchup-tab-dot.tab-warn {
+  background: #c9a94a;
+  border-color: #c9a94a;
+}
+.matchup-tab-dot.tab-bad {
+  background: #d9462b;
+  border-color: #d9462b;
+}
+
 .matchup-tabs-label {
   font-size: 0.72rem;
   text-transform: uppercase;

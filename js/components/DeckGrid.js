@@ -404,6 +404,22 @@ const DeckGrid = {
       if (net > 0) return "warn";
       return "bad";
     },
+    /**
+     * State of a matchup's plan, for the tab indicator:
+     *   "empty" - no IN or OUT entries at all (nothing planned yet)
+     *   "ok"    - has entries and is balanced (IN == OUT)
+     *   "warn"  - has entries and the deck grows (IN > OUT; legal)
+     *   "bad"   - has entries and the deck shrinks (IN < OUT; illegal)
+     *
+     * balanceState() alone can't distinguish "empty" from "balanced",
+     * since both have a net of 0. Checking whether any entry exists
+     * separates them.
+     */
+    tabState(matchup) {
+      const entries = this.inTotal(matchup) + this.outTotal(matchup);
+      if (entries === 0) return "empty";
+      return this.balanceState(matchup);
+    },
     balanceLabel(matchup) {
       const net = this.balanceFor(matchup);
       if (net === 0) return "balanced";
@@ -451,6 +467,11 @@ const DeckGrid = {
             />
           </template>
           <template v-else>
+            <span
+              class="matchup-tab-dot"
+              :class="'tab-' + tabState(m)"
+              aria-hidden="true"
+            ></span>
             <span class="matchup-tab-name">{{ m }}</span>
             <span
               class="matchup-tab-remove"
