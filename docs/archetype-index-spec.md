@@ -300,17 +300,19 @@ producer change with no client-side migration.
 
 ## Reference implementation
 
-The canonical implementation lives in the client repository at
-`deploy/index_builder.py`. It is a standalone, standard-library-only
-Python script that reads `manifest.json` and the guide files and writes
-`archetypes.json`. That file is the source of truth for the algorithm;
-this spec describes the contract it must satisfy.
+The canonical implementation lives in the guides repository
+(`rndfunction/SideboardGuides`) as `index_builder.py` at the repo root.
+It is a standalone, standard-library-only Python script that reads
+`manifest.json` and the guide files and writes `archetypes.json`. That
+file is the source of truth for the algorithm; this spec describes the
+contract it must satisfy.
 
-It is kept next to this spec (in `deploy/`) rather than duplicated here so
-that a change to the algorithm and a change to this contract are one
-commit apart. To deploy, copy `deploy/index_builder.py` and
-`deploy/submit-guide.yml` into the guides repository — see
-`deploy/README.md` for the exact steps.
+It runs inside the guides repository's `submit-guide` GitHub Action, which
+invokes it after writing a new guide and appending to the manifest, and
+includes the resulting `archetypes.json` in the same commit. The client
+(this repository) consumes that file; it does not produce it. If the
+algorithm changes, update it in the guides repository and keep this spec
+in step with the contract.
 
 The two properties worth stating here, because they are easy to get wrong
 when reimplementing:

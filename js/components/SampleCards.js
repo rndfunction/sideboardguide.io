@@ -113,7 +113,7 @@ const SampleCards = {
   },
   template: `
     <div class="sample-cards" aria-hidden="true">
-      <p class="sample-cards-caption">You'll get three printable sleeve-sized cards:</p>
+      <p class="sample-cards-caption">Here's the guide you'll make &mdash; sized for your deckbox:</p>
 
       <div class="sample-cards-row">
         <div class="sample-mini-wrap">

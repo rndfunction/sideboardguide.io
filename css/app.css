@@ -2032,7 +2032,13 @@ table.guide-table tr.section-row.sideboard-divider td {
 }
 
 @media (max-width: 1000px) {
-  .app-two-col {
+  /* Match the loaded state's specificity too. The base rule uses
+     `.app-two-col.app-two-col-loaded` (two classes), which otherwise
+     beats this single-class selector and keeps the loaded layout
+     two-column on a phone. Listing both here makes them equal, so the
+     media rule wins and both states stack to one column on mobile. */
+  .app-two-col,
+  .app-two-col.app-two-col-loaded {
     grid-template-columns: 1fr;
   }
 }
