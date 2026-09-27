@@ -176,15 +176,16 @@ const PrintView = {
       if (!mus.length) {
         return [{ matchups: [], rows: [] }];
       }
-      const pages = [];
-      for (let i = 0; i < mus.length; i += MATCHUPS_PER_CARD) {
-        const pageMatchups = mus.slice(i, i + MATCHUPS_PER_CARD);
-        pages.push({
-          matchups: pageMatchups,
-          rows: this.buildRows(pageMatchups)
-        });
-      }
-      return pages;
+      // Group matchups by similarity so each card holds the three that
+      // share the most swaps. Grouping similar matchups together makes a
+      // card read as one compact plan instead of a scatter of unrelated
+      // +N / -N cells. The builder's matchup order is untouched; this
+      // only affects how they are laid out on printed cards.
+      const groups = this.groupMatchupsBySimilarity(mus, MATCHUPS_PER_CARD);
+      return groups.map((pageMatchups) => ({
+        matchups: pageMatchups,
+        rows: this.buildRows(pageMatchups)
+      }));
     },
     decklistRows() {
       if (!this.deck) return [];
@@ -397,6 +398,149 @@ const PrintView = {
         return a.name.localeCompare(b.name);
       });
       return rows;
+    },
+    /**
+     * The set of plan keys that have an entry for a given matchup. Used
+     * as the "signature" of a matchup when judging how similar two are:
+     * two matchups that touch the same cards are similar; two that touch
+     * different cards are not.
+     */
+    cardsTouchedBy(matchup) {
+      const set = new Set();
+      const plan = this.plan || {};
+      for (const key of Object.keys(plan)) {
+        const entry = plan[key] && plan[key][matchup];
+        if (entry) set.add(key);
+      }
+      return set;
+    },
+    /**
+     * Jaccard similarity between two matchup signatures: |A and B| / |A or B|.
+     * 1.0 means identical card sets, 0 means no overlap.
+     */
+    similarity(aSet, bSet) {
+      if (!aSet.size && !bSet.size) return 0;
+      let inter = 0;
+      for (const x of aSet) if (bSet.has(x)) inter++;
+      const union = aSet.size + bSet.size - inter;
+      return union ? inter / union : 0;
+    },
+    /**
+     * Partition matchups into groups of at most `size`, grouping similar
+     * ones together. For small counts (the normal case) this finds the
+     * optimal partition by trying every grouping; for larger counts it
+     * falls back to a greedy pass. Returns an array of matchup arrays.
+     */
+    groupMatchupsBySimilarity(mus, size) {
+      const n = mus.length;
+      if (n <= size) return [mus.slice()];
+
+      const sigs = mus.map((m) => this.cardsTouchedBy(m));
+      const sim = (i, j) => this.similarity(sigs[i], sigs[j]);
+
+      // Brute force for small n: enumerate partitions of the index set
+      // into groups of <= size, score each by total pairwise similarity
+      // within groups, keep the best.
+      if (n <= 10) {
+        let best = null;
+        let bestScore = -Infinity;
+        const used = new Array(n).fill(false);
+        const groups = [];
+
+        const scoreGroups = () => {
+          let s = 0;
+          for (const g of groups) {
+            for (let a = 0; a < g.length; a++) {
+              for (let b = a + 1; b < g.length; b++) {
+                s += sim(g[a], g[b]);
+              }
+            }
+          }
+          return s;
+        };
+
+        const recurse = (start) => {
+          if (start >= n) {
+            const s = scoreGroups();
+            if (s > bestScore) { bestScore = s; best = groups.map((g) => g.slice()); }
+            return;
+          }
+          // Find first unused index.
+          let first = start;
+          while (first < n && used[first]) first++;
+          if (first >= n) {
+            const s = scoreGroups();
+            if (s > bestScore) { bestScore = s; best = groups.map((g) => g.slice()); }
+            return;
+          }
+          // Build a group starting at `first` with up to `size` members.
+          const candidates = [];
+          for (let j = first + 1; j < n; j++) if (!used[j]) candidates.push(j);
+          const maxExtra = Math.min(size - 1, candidates.length);
+          // Try all subsets of candidates up to maxExtra to join `first`.
+          const choose = (idx, chosen) => {
+            groups.push([first].concat(chosen));
+            used[first] = true;
+            for (const c of chosen) used[c] = true;
+            recurse(first + 1);
+            used[first] = false;
+            for (const c of chosen) used[c] = false;
+            groups.pop();
+            if (chosen.length < maxExtra) {
+              for (let k = idx; k < candidates.length; k++) {
+                choose(k + 1, chosen.concat(candidates[k]));
+              }
+            }
+          };
+          // Always allow `first` alone as a group.
+          groups.push([first]);
+          used[first] = true;
+          recurse(first + 1);
+          used[first] = false;
+          groups.pop();
+          // Then groups of first + subsets.
+          for (let k = 0; k < candidates.length; k++) {
+            choose(k + 1, [candidates[k]]);
+          }
+        };
+
+        recurse(0);
+        if (best) return best.map((g) => g.map((i) => mus[i]));
+      }
+
+      // Greedy fallback: repeatedly take the most similar remaining pair,
+      // grow the group to `size` with the members most similar to it.
+      const remaining = mus.map((m, i) => i);
+      const out = [];
+      while (remaining.length) {
+        let bi = 0, bj = 1, bs = -Infinity;
+        if (remaining.length === 1) {
+          out.push([mus[remaining[0]]]);
+          break;
+        }
+        for (let a = 0; a < remaining.length; a++) {
+          for (let b = a + 1; b < remaining.length; b++) {
+            const s = sim(remaining[a], remaining[b]);
+            if (s > bs) { bs = s; bi = a; bj = b; }
+          }
+        }
+        const group = [remaining[bi], remaining[bj]];
+        remaining.splice(bj, 1);
+        remaining.splice(bi, 1);
+        while (group.length < size && remaining.length) {
+          let bestIdx = 0, bestAvg = -Infinity;
+          for (let r = 0; r < remaining.length; r++) {
+            let avg = 0;
+            for (const gi of group) avg += sim(remaining[r], gi);
+            avg /= group.length;
+            if (avg > bestAvg) { bestAvg = avg; bestIdx = r; }
+          }
+          group.push(remaining[bestIdx]);
+          remaining.splice(bestIdx, 1);
+        }
+        out.push(group.map((i) => mus[i]));
+      }
+      return out;
     },
     buildRows(pageMatchups) {
       if (!this.deck) return [];
