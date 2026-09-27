@@ -10,7 +10,7 @@ const DeckInput = {
     loading: { type: Boolean, default: false },
     error: { type: String, default: null }
   },
-  emits: ["parse", "reset"],
+  emits: ["parse", "reset", "load-example"],
   data() {
     return {
       text: "",
@@ -74,6 +74,19 @@ const DeckInput = {
   watch: {
     hasParsed(val) {
       if (val) this.expanded = false;
+    },
+    // A deck can also arrive without hasParsed transitioning (e.g. a guide
+    // loaded from Browse while a deck is already present, or the component
+    // mounting with a parsed deck). Watch the parsed object itself, with
+    // immediate so an already-loaded deck collapses on mount, and collapse
+    // whenever a populated parse appears. The user can still expand it
+    // afterward via the Edit button.
+    parsed: {
+      immediate: true,
+      handler(val) {
+        const has = !!(val && val.mainboard && val.mainboard.length);
+        if (has) this.expanded = false;
+      }
     }
   },
   methods: {
@@ -92,9 +105,11 @@ const DeckInput = {
       this.expanded = !this.expanded;
     },
     loadExample() {
-      this.text = this.example;
+      // Emit upward rather than filling the textarea: the parent loads a
+      // complete finished guide (decklist + matchups + plan) so the user
+      // sees the payoff immediately, not just a sample decklist.
       this.fileError = "";
-      this.expanded = true;
+      this.$emit("load-example");
     },
     // --- File upload ---
     triggerFileInput() {
@@ -280,7 +295,7 @@ const DeckInput = {
               type="button"
               class="usa-button usa-button--outline deck-input-example-btn"
               @click="loadExample"
-            >Load example decklist</button>
+            >Load example guide</button>
             <p class="deck-input-side-hint">
               Drag &amp; drop works on the textarea too.
             </p>

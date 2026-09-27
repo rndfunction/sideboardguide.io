@@ -23,6 +23,19 @@ const PrintListCard = {
     colorPips() {
       return (this.colors || []).join("");
     },
+    /**
+     * The number of stacked list rows the card will actually draw: the
+     * total across all sections, halved (the list is two columns) and
+     * rounded up. Drives the fit-to-space font sizing in CSS via the
+     * --rows custom property.
+     */
+    visualRowCount() {
+      const total = (this.sections || []).reduce(
+        (sum, s) => sum + ((s.rows || []).length),
+        0
+      );
+      return Math.max(1, Math.ceil(total / 2));
+    },
     headerLabel() {
       // "Maindeck · 60" for one section, "Maindeck + Sideboard · 75" for two.
       const titles = this.sections.map((s) => s.title).join(" + ");
@@ -52,19 +65,22 @@ const PrintListCard = {
     }
   },
   template: `
-    <div class="print-card print-list-card">
+    <div class="print-card print-list-card" :style="{ '--rows': visualRowCount }">
       <header class="pc-header">
-        <div class="pc-title" :style="fittedDeckName">{{ deckName }}</div>
-        <div class="pc-sub">
-          <span class="pc-format">{{ headerLabel }}</span>
-          <span v-if="colorPips" class="pc-pips">{{ colorPips }}</span>
+        <div class="pc-title">
+          <span class="pc-title-name">{{ deckName }}</span>
+          <span v-if="headerLabel" class="pc-title-meta"> &middot; {{ headerLabel }}</span>
+          <span v-if="colorPips" class="pc-title-meta"> &middot; {{ colorPips }}</span>
         </div>
       </header>
 
       <div class="pl-body">
         <template v-for="(section, si) in preparedSections" :key="'sec-' + si">
           <div v-if="si > 0" class="pl-section-divider">
-            <span class="pl-section-divider-label">{{ section.title }} &middot; {{ section.total }}</span>
+            <!-- On a combined checklist the sections are already implied by
+                 the layout (maindeck above, sideboard below the divider).
+                 Show only the count, not the redundant section name. -->
+            <span class="pl-section-divider-label">{{ section.total }}</span>
           </div>
           <div v-if="section.empty && sections.length === 1" class="pl-empty">No cards.</div>
           <div v-else class="pl-columns">

@@ -1,6 +1,12 @@
 /* Sideboard Guide Builder — custom styles layered on USWDS */
 
 :root {
+  /* Printed card dimensions: a bare MTG card (63mm x 88mm). Used by both
+     the on-screen preview (.print-card) and the print layout, so the two
+     always agree. Change here to change the printed size everywhere. */
+  --card-w: 63mm;
+  --card-h: 88mm;
+
   --mtg-white: #f7f7f2;
   --mtg-blue: #4a90d9;
   --mtg-black: #2a2a2a;
@@ -202,17 +208,31 @@ body {
 
 .deck-input-grid {
   display: grid;
-  /* Textarea flexes, sidebar keeps a fixed 14rem so its buttons never
-     squish. When the workspace column is narrow the textarea shrinks
-     proportionally. */
-  grid-template-columns: minmax(0, 1fr) 14rem;
+  /* One surface for the whole deck-input area: the grid itself carries
+     the charcoal background, border, radius, and padding, so the
+     textarea and the button panel sit inside a single card that spans
+     the full workspace width. This matches the loaded/collapsed state's
+     surface, so the empty state reads as the same thing with less in
+     it, rather than a different layout.
+     Three columns: the textarea (capped, hugs the left), the button
+     panel at its natural 14rem, and a flexible empty third column whose
+     area is the same charcoal -- so the "whitespace" is part of the
+     surface, not the page behind it. */
+  grid-template-columns: minmax(0, 300px) 14rem minmax(0, 1fr);
   gap: 1rem;
   align-items: stretch;
+  background: var(--site-surface-alt);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 6px;
+  padding: 0.75rem;
 }
 
 @media (max-width: 640px) {
   .deck-input-grid {
     grid-template-columns: 1fr;
+    /* Stacked: a little gap between the textarea and the button panel,
+       since they no longer share a visible internal divider. */
+    gap: 0.75rem;
   }
 }
 
@@ -245,13 +265,12 @@ body {
 }
 
 .deck-input-side {
+  /* No surface of its own now -- the background, border, and radius live
+     on .deck-input-grid so the panel and the empty third column share one
+     continuous charcoal area. This is just the content column. */
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.75rem;
-  background: var(--site-surface-alt);
-  border: 1px solid var(--site-border-soft);
-  border-radius: 6px;
 }
 
 .deck-input-file-hidden {
@@ -956,15 +975,20 @@ table.guide-table tr.section-row td {
   flex-wrap: wrap;
   gap: 0.25in;
   padding: 0;
-  background: transparent;
+  /* The preview grid sits on the page background, not a panel. */
+  background: var(--site-bg);
   border-radius: 0;
   justify-content: center;
 }
 
 /* A physical card, sized to fit a standard MTG sleeve (66.5mm x 92.5mm). */
 .print-card {
-  width: 2.62in;
-  height: 3.64in;
+  /* Bare MTG card size (63mm x 88mm), not sleeve size. This is what fits
+     9 per Letter sheet in a 3x3 grid, and it reads as a companion to the
+     deck rather than an insert. Both the on-screen preview and the printed
+     output derive from these two values. */
+  width: var(--card-w);
+  height: var(--card-h);
   background: #fff;
   color: #000;
   border: 1px solid #333;
@@ -979,29 +1003,44 @@ table.guide-table tr.section-row td {
 }
 
 .pc-header {
-  border-bottom: 1.5pt solid #000;
-  padding-bottom: 0.05in;
-  margin-bottom: 0.06in;
+  border-bottom: 1pt solid #000;
+  padding-bottom: 0.03in;
+  margin-bottom: 0.05in;
   flex: 0 0 auto;
 }
 
 .pc-title {
   font-weight: 700;
-  line-height: 1.05;
-  font-size: 18pt;
-  /* Clip long titles rather than showing "..." on the physical card.
-     Every character of the name matters more than the truncation hint. */
+  line-height: 1.1;
+  /* Compact one-line header: the name, format, and colors are reminder
+     text (so the card goes in the right box), not a headline. Keeping
+     them to a single 9pt line reclaims roughly two table rows' worth of
+     vertical space, which the matchup content needs. */
+  font-size: 9pt;
+  white-space: nowrap;
+  /* Clip long names rather than showing "..." on the physical card. */
   overflow: hidden;
   text-overflow: clip;
   white-space: nowrap;
 }
 
-.pc-sub {
-  display: flex;
-  justify-content: space-between;
-  font-size: 8pt;
-  color: #333;
-  margin-top: 0.02in;
+/* The format and colors now sit inline in .pc-title, so .pc-sub is gone.
+   The name is bold; the metadata is lighter so the name still leads. */
+.pc-title-name {
+  font-weight: 700;
+}
+
+/* The checklist card reuses the compact one-line header. */
+.print-list-card .pc-title {
+  font-size: 9pt;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.pc-title-meta {
+  font-weight: 400;
+  color: #555;
 }
 
 .pc-pips {
@@ -1013,8 +1052,22 @@ table.guide-table tr.section-row td {
   width: 100%;
   border-collapse: collapse;
   flex: 1 1 auto;
-  font-size: 7pt;
+  /* Fit-to-space: the font size is computed per card by the measure-and-fit
+     routine in PrintView (which accounts for wrapping names, unlike a
+     row-count formula). --fit-size is set on the card root. The fallback
+     covers the first paint before the fit runs. */
+  font-size: var(--fit-size, 8pt);
   table-layout: fixed;
+  /* A touch of bottom breathing room so the last row never sits flush
+     against the card edge when the table fills the available height. */
+  margin-bottom: 0.05in;
+}
+
+/* When the fit routine determines every row can share the tallest cell's
+   height, --cell-h is set on the card and applied here, making the row
+   grid uniform. When it is not set, rows size to their content (ragged). */
+.print-card[style*="--cell-h"] .pc-table tbody tr {
+  height: var(--cell-h);
 }
 
 .pc-table th,
@@ -1034,9 +1087,22 @@ table.guide-table tr.section-row td {
 
 .pc-col-card {
   text-align: left;
-  /* No count prefix on the guide card, so this column can be even
-     narrower. Matchup columns share the remaining space evenly. */
-  width: 0.75in;
+  /* Wider than before (was 0.75in): card names are the content of this
+     column and some are long single words (Spinewoods, Vitu-Ghazi) that
+     were forcing the width-aware fit to shrink the whole card's font
+     just to fit a narrow column. The matchup columns hold tiny content
+     (-4, +2, "Tron"), so they can yield the space. */
+  width: 1.0in;
+  /* Names wrap at spaces only (normal wrapping). The fit routine shrinks
+     the font until the widest single word fits the column, so a word
+     never needs to break mid-word; it just wraps to the next line. */
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  /* A little breathing room between the name and the cell walls: enough
+     to look deliberate, not so much that it steals font size (the fit is
+     width-aware, so wider padding means a smaller fitted font). */
+  padding: 0.04in 0.05in;
 }
 
 .pc-col-mu {
@@ -1061,9 +1127,9 @@ table.guide-table tr.section-row td {
 .pc-cell {
   text-align: center;
   font-weight: 700;
-  /* The IN/OUT numbers are the point of the card. Make them noticeably
-     larger than the surrounding row text so they read at a glance. */
-  font-size: 9.5pt;
+  /* The IN/OUT numbers are the point of the card, so they lead: the
+     same fitted size as the row text, scaled up a touch. */
+  font-size: calc(var(--fit-size, 8pt) * 1.15);
   line-height: 1.05;
 }
 
@@ -1110,13 +1176,23 @@ table.guide-table tr.section-row td {
 
 /* Print root: hidden on screen, shown only during print. */
 .print-root {
-  display: none;
+  /* Laid out but off-screen, not display:none. The print cards need to be
+     measurable (scrollHeight/clientHeight) so the fit-to-space routine can
+     size their text. display:none would make them unmeasurable. Off-screen
+     absolute positioning keeps them out of view without affecting layout
+     or print (the print media rule repositions/resets this). */
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  visibility: hidden;
 }
 
 /* Print media: hide the on-screen app entirely, show only the print root. */
 @media print {
   @page {
     size: letter;
+    /* Small page margin clears the printer's non-printable edge. It does
+       not add cuts: the only cuts are the internal grid lines. */
     margin: 0.25in;
   }
 
@@ -1131,6 +1207,10 @@ table.guide-table tr.section-row td {
   }
 
   .print-root {
+    /* Reset the off-screen measurement positioning for actual printing. */
+    position: static !important;
+    left: auto !important;
+    visibility: visible !important;
     display: block !important;
   }
 
@@ -1145,15 +1225,20 @@ table.guide-table tr.section-row td {
 
   .print-cards-grid {
     display: grid;
-    grid-template-columns: 2.62in 2.62in;
-    gap: 0.25in;
+    /* 3 across, no gap: cards share edges so the borders form a grid of
+       cut lines. 3x3 fills a Letter sheet at bare-card size, and the
+       shared edges mean only 4 cuts separate 9 cards. */
+    grid-template-columns: repeat(3, var(--card-w));
+    gap: 0;
     padding: 0;
     background: none;
     justify-content: start;
   }
 
   .print-card {
-    border: 0.5pt dashed #aaa;
+    /* Solid hairline, not dashed: cards share edges, so each border is a
+       continuous cut line across the sheet. */
+    border: 0.5pt solid #999;
     box-shadow: none;
     page-break-inside: avoid;
     break-inside: avoid;
@@ -1596,6 +1681,9 @@ table.guide-table tr.section-row.sideboard-divider td {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* Fit-to-space: set per card by the measure-and-fit routine in
+     PrintView. Fallback covers the first paint. */
+  font-size: var(--fit-size, 8pt);
 }
 
 /* Divider between stacked sections (main / side on a combined card). */
@@ -1924,21 +2012,23 @@ table.guide-table tr.section-row.sideboard-divider td {
    App two-column layout: workspace (2/3) + preview pane (1/3).
    ============================================================ */
 
-.app-two-col {
+/* One stable ratio in both the empty and loaded states. Previously the
+   columns flipped from workspace-1/3+preview-2/3 (empty) to
+   workspace-2/3+preview-1/3 (loaded), which reflowed the whole page on
+   the click that loads a deck and read as an abrupt change. Using the
+   loaded proportions always means nothing rearranges on load; the empty
+   state simply has less content in the left column.
+
+   If a smaller shift is preferred over no shift, change the base ratio
+   to something between the two, e.g. `minmax(0, 1.4fr) minmax(0, 1fr)`,
+   and leave the loaded override neutralized as it is here. */
+.app-two-col,
+.app-two-col.app-two-col-loaded {
   display: grid;
-  /* Empty state: workspace 1/3, preview pane 2/3. The narrow input
-     panel keeps the decklist textarea compact and lets the sample
-     cards be the visual focus. */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
   gap: 1.25rem;
   align-items: start;
   margin-top: 0.5rem;
-}
-
-/* Loaded state: workspace 2/3, preview pane 1/3. When the user is
-   actually working in the grid, the grid is what needs room. */
-.app-two-col.app-two-col-loaded {
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
 }
 
 @media (max-width: 1000px) {
@@ -1970,10 +2060,14 @@ table.guide-table tr.section-row.sideboard-divider td {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* Match the page background so the preview cards sit on the site
+     surface rather than a contrasting slab. */
+  background: var(--site-bg);
 }
 
 .preview-pane-body {
   min-height: 0;
+  background: var(--site-bg);
 }
 
 .preview-pane-off {
@@ -2029,7 +2123,10 @@ table.guide-table tr.section-row.sideboard-divider td {
 
 /* Print card backdrop: near-black so white cards pop dramatically. */
 .print-cards-grid {
-  background: #0e1016;
+  /* Was a near-black slab (#0e1016), darker than the page, which read as
+     a contrasting panel behind the preview cards. Match the page
+     background so the cards sit on the site surface. */
+  background: var(--site-bg);
 }
 
 /* Grid cell state colors on the dark Forge palette. */

@@ -45,12 +45,12 @@ const PrintCard = {
     }
   },
   template: `
-    <div class="print-card">
+    <div class="print-card" :style="{ '--rows': Math.max(1, rows.length) }">
       <header class="pc-header">
-        <div class="pc-title" :style="fittedDeckName">{{ deckName }}</div>
-        <div class="pc-sub">
-          <span v-if="format" class="pc-format">{{ format }}</span>
-          <span v-if="colorPips" class="pc-pips">{{ colorPips }}</span>
+        <div class="pc-title">
+          <span class="pc-title-name">{{ deckName }}</span>
+          <span v-if="format" class="pc-title-meta"> &middot; {{ format }}</span>
+          <span v-if="colorPips" class="pc-title-meta"> &middot; {{ colorPips }}</span>
         </div>
       </header>
 

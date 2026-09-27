@@ -22,6 +22,7 @@ import {
 } from "../titlecard.js";
 import { TEXTURE_OPTIONS, INTENSITY_OPTIONS } from "../textures.js";
 import { exportCardsToPdf } from "../pdfexport.js";
+import { store } from "../store.js";
 
 const MATCHUPS_PER_CARD = 3;
 const COMBINED_ROW_CAP = 50;
@@ -42,11 +43,11 @@ const PrintView = {
     // the user hides things from there if they want.
     const prefs = loadPrefs() || {};
     return {
-      includeDecklist: true,
-      includeSideboard: true,
-      includeTitleCard: true,
-      includeMatchups: true,
-      titleColor: prefs.titleColor || null, // resolved to default on mount
+      // includeTitleCard / includeDecklist / includeSideboard /
+      // includeMatchups are NOT here: they live in the shared store (see
+      // store.js) so the preview instance and the print-root instance
+      // stay in sync. See the computed getters/setters below.
+      titleColor: prefs.titleColor || null, // resolved to default on mount",
       titleFontKey: prefs.titleFontKey || defaultFontKey(),
       titleSymbol: prefs.titleSymbol || "auto",
       titleTexture: prefs.titleTexture || "none",
@@ -63,6 +64,13 @@ const PrintView = {
     this.titleColor = defaultColorForDeck(this.deck);
     document.addEventListener("click", this.onDocClick);
     document.addEventListener("keydown", this.onDocKey);
+    // Size each card's text to the space it has, once rendered.
+    this.$nextTick(() => this.fitAllCards());
+  },
+  updated() {
+    // Content may have changed (chips toggled, matchups added, deck
+    // reloaded). Re-fit on the next tick, once the new DOM is laid out.
+    this.$nextTick(() => this.fitAllCards());
   },
   beforeUnmount() {
     document.removeEventListener("click", this.onDocClick);
@@ -84,11 +92,44 @@ const PrintView = {
         const oldId = oldDeck ? (oldDeck.stats && oldDeck.stats.totalMain) + ":" + ((oldDeck.stats && oldDeck.stats.colors) || []).join("") : null;
         if (newId !== oldId) {
           this.titleColor = newDeck ? defaultColorForDeck(newDeck) : null;
+          // On a genuinely new deck, default the print chips to the
+          // matchup guide only. The matchup guide is the artifact the
+          // user is actually building; the title and decklist cards are
+          // secondary. The user can re-enable them from the chips.
+          if (newDeck) {
+            // Reset to the story default on every new deck: the matchup
+            // guide is the artifact; the rest is window dressing the user
+            // can turn back on. Written to the store so both PrintView
+            // instances reset together.
+            store.includeTitleCard = false;
+            store.includeDecklist = false;
+            store.includeSideboard = false;
+            store.includeMatchups = true;
+          }
         }
       }
     }
   },
   computed: {
+    // The four print toggles are shared via the store. These getters/
+    // setters let the template's v-model bind to them without change,
+    // while keeping one source of truth across both PrintView instances.
+    includeTitleCard: {
+      get() { return store.includeTitleCard; },
+      set(v) { store.includeTitleCard = v; }
+    },
+    includeDecklist: {
+      get() { return store.includeDecklist; },
+      set(v) { store.includeDecklist = v; }
+    },
+    includeSideboard: {
+      get() { return store.includeSideboard; },
+      set(v) { store.includeSideboard = v; }
+    },
+    includeMatchups: {
+      get() { return store.includeMatchups; },
+      set(v) { store.includeMatchups = v; }
+    },
     colors() {
       return (this.deck && this.deck.stats && this.deck.stats.colors) || [];
     },
@@ -210,6 +251,106 @@ const PrintView = {
     }
   },
   methods: {
+    /**
+     * Fit each rendered card's text so its content fills the available
+     * height without overflowing. Binary-searches a per-card font size
+     * between 6pt and 11pt, measuring the content container against its
+     * box. Handles variable row heights (wrapped card names), which a
+     * row-count formula cannot.
+     *
+     * Runs in whichever PrintView instance is mounted. Both the preview
+     * and the print root call it; each measures its own DOM. The print
+     * root is positioned off-screen (not display:none) so it is
+     * measurable.
+     */
+    fitAllCards() {
+      const root = this.$el;
+      if (!root) return;
+      const cards = Array.from(root.querySelectorAll(".print-card"));
+      for (const card of cards) {
+        const content = card.querySelector(".pc-table") || card.querySelector(".pl-body");
+        if (!content) continue;
+
+        // The card clips its content (overflow: hidden); the content
+        // element itself does not scroll, so comparing its scrollHeight
+        // to its own clientHeight is meaningless. Instead, measure the
+        // space the card actually gives the content -- its inner height
+        // minus the header and any bottom margin on the content -- and
+        // check whether the content's natural height exceeds that.
+        const header = card.querySelector(".pc-header");
+        const headerH = header ? header.getBoundingClientRect().height : 0;
+        const cardStyle = window.getComputedStyle(card);
+        const padTop = parseFloat(cardStyle.paddingTop) || 0;
+        const padBottom = parseFloat(cardStyle.paddingBottom) || 0;
+        const cardInner = card.clientHeight - padTop - padBottom;
+        const contentMarginBottom = parseFloat(window.getComputedStyle(content).marginBottom) || 0;
+        const available = cardInner - headerH - contentMarginBottom;
+
+        // Binary search the largest size at which the content fits.
+        let best = 6;
+        let a = 6, b = 11;
+        for (let i = 0; i < 7; i++) {
+          const mid = (a + b) / 2;
+          card.style.setProperty("--fit-size", mid + "pt");
+          // Force a synchronous layout read, then measure natural height.
+          const contentH = content.getBoundingClientRect().height;
+          let tooBig = contentH > available + 0.5;
+
+          // Also check horizontal overflow: with normal wrapping (break
+          // at spaces only), a name cell whose scrollWidth exceeds its
+          // clientWidth means a single word is wider than the column.
+          // Shrink until the widest word fits, so names wrap cleanly at
+          // spaces rather than breaking mid-word or spilling.
+          if (!tooBig) {
+            const cells = content.querySelectorAll(".pc-col-card");
+            for (const c of cells) {
+              // No tolerance: even a sliver of a glyph past the content
+              // edge is visible on a printed card. Erring a half-step
+              // smaller is invisible; erring a step larger bleeds a
+              // letter over the border.
+              if (c.scrollWidth > c.clientWidth) {
+                tooBig = true;
+                break;
+              }
+            }
+          }
+
+          if (tooBig) {
+            b = mid;
+          } else {
+            best = mid;
+            a = mid;
+          }
+          if (b - a < 0.1) break;
+        }
+        card.style.setProperty("--fit-size", best + "pt");
+
+        // Uniform cells (matchup table only): if every row can be as tall
+        // as the tallest cell and still fit, make them all that height so
+        // the grid reads as regular. Otherwise leave the rows ragged but
+        // fitting. Measured after the font has settled.
+        card.style.removeProperty("--cell-h");
+        if (content.classList.contains("pc-table")) {
+          const rows = Array.from(content.querySelectorAll("tbody tr"));
+          if (rows.length) {
+            let maxRow = 0;
+            for (const r of rows) {
+              const h = r.getBoundingClientRect().height;
+              if (h > maxRow) maxRow = h;
+            }
+            // Available height for the table body = available minus the
+            // header row (thead) which we are not resizing.
+            const thead = content.querySelector("thead");
+            const theadH = thead ? thead.getBoundingClientRect().height : 0;
+            const bodyAvailable = available - theadH;
+            // If uniform rows fit, apply. +1 tolerance for sub-pixel.
+            if (maxRow > 0 && rows.length * maxRow <= bodyAvailable + 1) {
+              card.style.setProperty("--cell-h", maxRow + "px");
+            }
+          }
+        }
+      }
+    },
     persistPrefs() {
       savePrefs({
         titleColor: this.titleColor,
@@ -435,7 +576,7 @@ const PrintView = {
             <span class="print-chip-count">({{ (matchups || []).length }})</span>
           </label>
           <span class="print-tip">
-            Tip: in the print dialog choose "Actual size" (not "Fit to page") so the sleeve-sized dimensions are preserved.
+            Tip: in the print dialog choose "Actual size" (not "Fit to page") so the card dimensions are preserved.
           </span>
         </div>
 

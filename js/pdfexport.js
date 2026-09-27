@@ -47,11 +47,14 @@ async function ensureLibs() {
 const MM_PER_IN = 25.4;
 const LETTER_MM = { w: 8.5 * MM_PER_IN, h: 11 * MM_PER_IN };
 const MARGIN_MM = 6;
-const GAP_MM = 4;
+/* No gap between cards: they share edges so the borders form cut lines,
+   and zero gap is what lets a third row fit on the sheet. */
+const GAP_MM = 0;
 
 /**
  * Render an array of DOM elements (.print-card) as a Letter-sized PDF,
- * laid out 2-across. Each card is rasterized at 2x scale for crispness.
+ * laid out in a 3x3 grid with no gaps. Each card is rasterized at high
+ * scale for crispness.
  *
  * @param {HTMLElement[]} cardEls
  * @param {string} filename
@@ -78,7 +81,9 @@ export async function exportCardsToPdf(cardEls, filename, onProgress) {
   }
 
   // Card physical dimensions are set by CSS at 2.62in x 3.64in.
-  const CARD_MM = { w: 2.62 * MM_PER_IN, h: 3.64 * MM_PER_IN };
+  // Bare MTG card size (63mm x 88mm), matching --card-w / --card-h in the
+  // print CSS. Sleeve size was 2.62in x 3.64in; this is what fits 3x3.
+  const CARD_MM = { w: 63, h: 88 };
 
   // How many fit per row / page?
   const perRow = Math.max(1, Math.floor((usableW + GAP_MM) / (CARD_MM.w + GAP_MM)));

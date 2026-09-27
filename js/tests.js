@@ -568,6 +568,44 @@ suite("toDecklistText", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// example guide payload
+// ---------------------------------------------------------------------------
+
+suite("example guide: shape", () => {
+  // Imported statically at the top of this file would be cleanest, but
+  // the example is only used here, so a top-of-suite import keeps it
+  // local. (Dynamic import is avoided for the same reason as store.js:
+  // it resolves oddly inside the preview iframe.)
+  test("EXAMPLE_GUIDE has the fields onImportShare reads", async () => {
+    const mod = await import("./example-guide.js");
+    const g = mod.EXAMPLE_GUIDE;
+    assert(g, "EXAMPLE_GUIDE is defined");
+    assert(g.deck && typeof g.deck.rawText === "string" && g.deck.rawText.length > 0,
+      "deck.rawText is a non-empty string");
+    assert(Array.isArray(g.matchups) && g.matchups.length > 0,
+      "matchups is a non-empty array");
+    assert(g.plan && typeof g.plan === "object",
+      "plan is an object");
+  });
+
+  test("EXAMPLE_GUIDE decklist parses to a real deck", async () => {
+    const mod = await import("./example-guide.js");
+    const parsed = parseDecklist(mod.EXAMPLE_GUIDE.deck.rawText);
+    assert(parsed.mainboard.length > 0, "mainboard parsed");
+    assert(parsed.sideboard.length > 0, "sideboard parsed");
+  });
+
+  test("EXAMPLE_GUIDE plan keys are section-aware", async () => {
+    const mod = await import("./example-guide.js");
+    const keys = Object.keys(mod.EXAMPLE_GUIDE.plan);
+    assert(keys.length > 0, "plan has entries");
+    for (const k of keys) {
+      assert(/@(main|side)$/.test(k), "plan key is section-aware: " + k);
+    }
+  });
+});
+
 } // end registerSyncSuites
 
 // ---------------------------------------------------------------------------

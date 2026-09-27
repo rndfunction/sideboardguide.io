@@ -42,7 +42,17 @@ export const store = Vue.reactive({
   // Hover preview state (driven by any component; rendered by CardPreview).
   hoveredCard: null,        // { image, name } | null
   hoveredCardPos: { x: 0, y: 0 },
-  _lastMatchupId: 0
+  _lastMatchupId: 0,
+  // Print-card toggles. These live in the store (not in PrintView) so
+  // that the on-screen preview instance and the print-root instance share
+  // one source of truth: toggling a chip in the preview must affect what
+  // actually prints. Default is the "story" state -- the matchup guide,
+  // which is what the site is about -- and it is reset on each new deck
+  // so every deck starts focused on the sideboard plan.
+  includeTitleCard: false,
+  includeDecklist: false,
+  includeSideboard: false,
+  includeMatchups: true
 });
 
 export async function loadDecklist(text) {

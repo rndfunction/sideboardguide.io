@@ -2,6 +2,7 @@
 // Vue is loaded as a global (window.Vue) via index.html because FORGE's preview
 // VFS rewrites bare-URL ESM imports relative to the importing file (breaking them).
 import DeckInput from "./components/DeckInput.js";
+import { EXAMPLE_GUIDE } from "./example-guide.js";
 import SampleCards from "./components/SampleCards.js";
 import GuideToolbar from "./components/GuideToolbar.js";
 import DeckGrid from "./components/DeckGrid.js";
@@ -74,6 +75,11 @@ const app = Vue.createApp({
   methods: {
     onParse(text) {
       loadDecklist(text);
+    },
+    async onLoadExample() {
+      // Load the whole finished example guide through the same path as an
+      // imported share, so decklist, matchups, and plan all populate.
+      await this.onImportShare(EXAMPLE_GUIDE);
     },
     onReset() {
       store.parsed = null;
@@ -154,6 +160,12 @@ const app = Vue.createApp({
     async onLoadSharedGuide(parsed) {
       await this.onImportShare(parsed);
       this.setMode("build");
+      // The user was scrolled down in the Browse list; jump to the top so
+      // the freshly loaded guide is in view. Deferred a tick so it runs
+      // after the Build view has rendered and settled the scroll.
+      this.$nextTick(() => {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      });
     },
     flashSubmit(msg, cls) {
       this.submitStatus = msg;
