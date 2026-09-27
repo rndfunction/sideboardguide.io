@@ -37,10 +37,13 @@ const PrintListCard = {
       return Math.max(1, Math.ceil(total / 2));
     },
     headerLabel() {
-      // "Maindeck · 60" for one section, "Maindeck + Sideboard · 75" for two.
-      const titles = this.sections.map((s) => s.title).join(" + ");
+      // Just the total card count. The section names ("Maindeck",
+      // "Sideboard") were redundant -- the layout already shows the
+      // maindeck above and the sideboard below the divider -- and the
+      // full "Maindeck + Sideboard · 75" string clipped in the compact
+      // one-line header. The count alone is short and still useful.
       const total = this.sections.reduce((a, s) => a + (s.total || 0), 0);
-      return titles + " \u00b7 " + total;
+      return String(total);
     },
     preparedSections() {
       // Attach column splits per section.

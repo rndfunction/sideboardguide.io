@@ -300,7 +300,7 @@ export async function submitGuide(payload, filename, meta, token) {
 // more forgiving than a strict version match, so that an index produced
 // by an older Action still works.
 const ARCHETYPES_VERSION_MIN = 1;
-const ARCHETYPES_VERSION_MAX = 2;
+const ARCHETYPES_VERSION_MAX = 3;
 
 /**
  * Validate a parsed archetypes.json against the client contract from the
@@ -327,13 +327,16 @@ export function isValidArchetypeIndex(data) {
     // either an array or missing so a slightly older file still loads.
     if (a.tags !== undefined && !Array.isArray(a.tags)) return false;
 
-    // boardInMatrix is v2-only and optional. When present, validate its
-    // shape: an object keyed by matchup, each value an array of card
-    // entries with name/inclusion/avgCopies.
-    if (a.boardInMatrix !== undefined) {
-      if (!a.boardInMatrix || typeof a.boardInMatrix !== "object") return false;
-      for (const matchup of Object.keys(a.boardInMatrix)) {
-        const list = a.boardInMatrix[matchup];
+    // boardInMatrix (v2) and boardOutMatrix (v3) are optional. When
+    // present, validate their shape: an object keyed by matchup, each
+    // value an array of card entries with name/inclusion/avgCopies.
+    // Shared validation for both matrices.
+    for (const matrixField of ["boardInMatrix", "boardOutMatrix"]) {
+      const matrix = a[matrixField];
+      if (matrix === undefined) continue;
+      if (!matrix || typeof matrix !== "object") return false;
+      for (const matchup of Object.keys(matrix)) {
+        const list = matrix[matchup];
         if (!Array.isArray(list)) return false;
         for (const entry of list) {
           if (!entry || typeof entry !== "object") return false;

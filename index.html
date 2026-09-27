@@ -92,6 +92,7 @@
         :plan="plan"
         :print-open="showPrint"
         :format="selectedFormat"
+        :shareable="!!loadedGuideFile"
         @load-state="onLoadState"
         @add-matchups="onAddMatchups"
         @toggle-print="onTogglePrint"
@@ -122,6 +123,12 @@
         <aside class="preview-pane">
           <div class="preview-pane-body">
             <sample-cards v-if="!enriched"></sample-cards>
+
+            <mana-curve
+              v-if="enriched"
+              :deck="enriched"
+              :plan="plan"
+            ></mana-curve>
 
             <print-view
               v-if="enriched && showPrint"

@@ -22,7 +22,10 @@ const GuideToolbar = {
     titleFontKey: { type: String, default: null },
     titleSymbol: { type: String, default: null },
     titleTexture: { type: String, default: null },
-    titleTextureIntensity: { type: String, default: null }
+    titleTextureIntensity: { type: String, default: null },
+    // True when the loaded guide came from the repository (so its URL is
+    // shareable). A guide built from scratch has no shareable link.
+    shareable: { type: Boolean, default: false }
   },
   emits: ["add-matchups", "toggle-print", "import-share", "browse-guides", "submit-guide"],
   data() {
@@ -63,6 +66,21 @@ const GuideToolbar = {
       this.lastMessage = msg;
       this.lastMessageClass = cls || "ok";
       setTimeout(() => { this.lastMessage = ""; }, 2500);
+    },
+    async copyLink() {
+      const url = (typeof window !== "undefined") ? window.location.href : "";
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+          this.flash("Link copied.", "ok");
+        } else {
+          // Clipboard unavailable (sandbox / old browser): select-fallback
+          // is awkward here, so just tell the user the URL is in the bar.
+          this.flash("Copy the address bar URL to share.", "ok");
+        }
+      } catch (_) {
+        this.flash("Could not copy. Copy the address bar URL.", "error");
+      }
     },
     onAddPreset(matchup) {
       this.$emit("add-matchups", [matchup]);
@@ -120,6 +138,13 @@ const GuideToolbar = {
           <option v-for="f in presetFormats" :key="f" :value="f">Format: {{ f }}</option>
         </select>
         <div class="toolbar-actions">
+          <button
+            v-if="shareable"
+            type="button"
+            class="usa-button usa-button--outline"
+            @click="copyLink"
+            title="Copy a link to this guide"
+          >Copy link</button>
           <button type="button" class="usa-button usa-button--outline" @click="onExportShare" title="Download this guide as a .json file">Export</button>
           <button type="button" class="usa-button usa-button--outline" @click="onImportShareClick" title="Load a guide from a .json file">Import</button>
           <input

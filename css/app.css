@@ -2127,6 +2127,158 @@ table.guide-table tr.section-row.sideboard-divider td {
   text-align: center;
 }
 
+/* --- Mana curve (preview pane) --- */
+
+.mana-curve {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem;
+  background: var(--site-surface);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 8px;
+}
+
+.mana-curve-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.mana-curve-title {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--site-text-muted);
+}
+
+.mana-curve-sub {
+  font-size: 0.78rem;
+  color: var(--site-accent);
+}
+
+.mana-curve-amv {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.mana-curve-amv-label {
+  color: var(--site-text-muted);
+  font-size: 0.78rem;
+}
+
+.mana-curve-amv-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-text);
+}
+
+.mana-curve-amv-value.after {
+  color: var(--site-accent);
+}
+
+.mana-curve-amv-arrow {
+  color: var(--site-text-muted);
+}
+
+.mana-curve-amv-delta {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-text-muted);
+}
+
+.mana-curve-amv-delta.is-up {
+  color: #c9a94a;
+}
+
+.mana-curve-amv-delta.is-down {
+  color: #4a8a4a;
+}
+
+.mana-curve-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.35rem;
+  height: 5rem;
+}
+
+.mana-curve-col {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.mana-curve-bars {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+}
+
+.mana-curve-bar {
+  display: block;
+  width: 40%;
+  border-radius: 2px 2px 0 0;
+  min-height: 1px;
+}
+
+.mana-curve-bar.before {
+  background: var(--site-surface-hi);
+  border: 1px solid var(--site-border);
+}
+
+.mana-curve-bar.after {
+  background: var(--site-accent);
+}
+
+.mana-curve-label {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--site-text-muted);
+}
+
+.mana-curve-empty {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--site-text-muted);
+}
+
+.mana-curve-legend {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--site-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.mana-curve-swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+}
+
+.mana-curve-swatch.before {
+  background: var(--site-surface-hi);
+  border: 1px solid var(--site-border);
+}
+
+.mana-curve-swatch.after {
+  background: var(--site-accent);
+}
+
 /* The empty-state headline. Large and full-color so it is the page's
    focal point: the site's "why" before the input's "how". The emphasis
    on "plan" ties the headline to the product. */
@@ -2512,6 +2664,7 @@ th.card-col:hover .card-preview-icon,
 }
 
 .guide-library-card {
+  position: relative;   /* anchor for the stretched-link overlay below */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -2521,6 +2674,7 @@ th.card-col:hover .card-preview-icon,
   border: 1px solid var(--site-border);
   border-radius: 12px;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
 }
 
 .guide-library-card:hover {
@@ -2615,6 +2769,17 @@ th.card-col:hover .card-preview-icon,
   font-weight: 600;
   cursor: pointer;
   transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.12s;
+}
+
+/* Whole-card click target: an invisible overlay stretched from the Open
+   button to fill the card, so clicking anywhere on the card opens the
+   guide. The button stays a real focusable <button> (keyboard and screen
+   readers unaffected); only its hit area grows. */
+.guide-library-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
 }
 
 .guide-library-open:hover:not(:disabled) {
@@ -3420,6 +3585,7 @@ th.card-col:hover .card-preview-icon,
 }
 
 .archetype-guide-row {
+  position: relative;   /* anchor for the whole-row click target */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3428,6 +3594,15 @@ th.card-col:hover .card-preview-icon,
   background: var(--site-surface-alt);
   border: 1px solid var(--site-border-soft);
   border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+/* The whole row is a link, so hovering anywhere on it should signal that,
+   not just hovering the Open button. */
+.archetype-guide-row:hover {
+  background: var(--site-surface-hi);
+  border-color: var(--site-accent);
 }
 
 .archetype-guide-info {
@@ -3457,6 +3632,16 @@ th.card-col:hover .card-preview-icon,
   flex: 0 0 auto;
   padding: 0.3rem 0.85rem;
   font-size: 0.82rem;
+}
+
+/* Whole-row click target: the Open button's invisible ::after stretches to
+   fill the row, so clicking anywhere on the row opens the guide. The
+   button stays a real focusable <button>; only its hit area grows. */
+.archetype-guide-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
 }
 
 /* --- Board-in list (v2 "What comes in") ---

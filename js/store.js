@@ -52,7 +52,12 @@ export const store = Vue.reactive({
   includeTitleCard: false,
   includeDecklist: false,
   includeSideboard: false,
-  includeMatchups: true
+  includeMatchups: true,
+  // Which matchup the user is currently viewing (the active tab in the
+  // deck grid). Lives in the store because more than one component needs
+  // it: the grid selects it, and the mana-curve panel reads it to show
+  // the after-sideboarding curve for the matchup being planned.
+  activeMatchup: null
 });
 
 export async function loadDecklist(text) {

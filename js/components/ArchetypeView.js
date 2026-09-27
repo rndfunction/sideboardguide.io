@@ -84,11 +84,21 @@ const ArchetypeView = {
      * Inverting at render time keeps the file in its natural storage
      * shape and costs one walk over the matrix.
      */
-    boardInCards(archetype) {
-      if (!archetype || !archetype.boardInMatrix) return [];
+    /**
+     * Invert a matchup-keyed board matrix (matchup -> cards) into a
+     * card-first list with a matchup count, sorted by count then name.
+     * Shared by boardInCards and boardOutCards.
+     */
+    /**
+     * Invert a matchup-keyed board matrix (matchup -> cards) into a
+     * card-first list with a matchup count, sorted by count then name.
+     * Shared by boardInCards and boardOutCards.
+     */
+    invertBoardMatrix(matrix) {
+      if (!matrix) return [];
       const byCard = new Map();
-      for (const matchup of Object.keys(archetype.boardInMatrix)) {
-        for (const entry of archetype.boardInMatrix[matchup] || []) {
+      for (const matchup of Object.keys(matrix)) {
+        for (const entry of matrix[matchup] || []) {
           if (!byCard.has(entry.name)) {
             byCard.set(entry.name, { name: entry.name, matchups: [], matchupCount: 0 });
           }
@@ -108,14 +118,33 @@ const ArchetypeView = {
       });
       return list;
     },
+    boardInCards(archetype) {
+      return this.invertBoardMatrix(archetype && archetype.boardInMatrix);
+    },
+    boardOutCards(archetype) {
+      return this.invertBoardMatrix(archetype && archetype.boardOutMatrix);
+    },
+    boardInCards(archetype) {
+      return this.invertBoardMatrix(archetype && archetype.boardInMatrix);
+    },
+    boardOutCards(archetype) {
+      return this.invertBoardMatrix(archetype && archetype.boardOutMatrix);
+    },
     /**
      * True when this card's index is the first of its matchup-count tier,
      * so the template can draw a divider above it. Compares against the
      * previous card in the already-sorted list.
      */
     isNewTier(archetype, index) {
-      const cards = this.boardInCards(archetype);
-      if (index === 0) return false;
+      return this.isNewTierList(this.boardInCards(archetype), index);
+    },
+    /**
+     * Like isNewTier but takes the already-computed card list. Lets the
+     * "What comes out" panel reuse the tier-divider logic without
+     * recomputing the IN list.
+     */
+    isNewTierList(cards, index) {
+      if (!cards || index <= 0 || index >= cards.length) return false;
       return cards[index].matchupCount !== cards[index - 1].matchupCount;
     },
     cardKey(archetype, cardName) {
@@ -276,6 +305,90 @@ const ArchetypeView = {
                 </li>
               </ul>
             </div>
+            </div>
+
+            <div v-if="boardOutCards(a).length" class="archetype-boardin">
+              <h3 class="archetype-freq-title">What comes out</h3>
+              <p class="archetype-boardin-hint">
+                Cards this archetype boards out, ranked by how many matchups
+                they come out for. Click a card for the matchups.
+              </p>
+              <ul class="archetype-boardin-list">
+                <li
+                  v-for="(card, ci) in boardOutCards(a)"
+                  :key="'bo-' + card.name"
+                  class="archetype-boardin-card"
+                  :class="{ 'is-new-tier': isNewTierList(boardOutCards(a), ci) }"
+                >
+                  <button
+                    type="button"
+                    class="archetype-boardin-row"
+                    :aria-expanded="isCardExpanded(a, 'out:' + card.name) ? 'true' : 'false'"
+                    @click="toggleCard(a, 'out:' + card.name)"
+                  >
+                    <span class="archetype-boardin-chevron" aria-hidden="true">
+                      {{ isCardExpanded(a, 'out:' + card.name) ? '&#9662;' : '&#9656;' }}
+                    </span>
+                    <span class="archetype-boardin-name">{{ card.name }}</span>
+                    <span class="archetype-boardin-count">
+                      {{ matchupCountLabel(card.matchupCount) }}
+                    </span>
+                  </button>
+                  <ul v-if="isCardExpanded(a, 'out:' + card.name)" class="archetype-boardin-detail">
+                    <li
+                      v-for="m in card.matchups"
+                      :key="'bo-' + card.name + '-' + m.matchup"
+                      class="archetype-boardin-detail-row"
+                    >
+                      <span class="archetype-boardin-detail-vs">vs {{ m.matchup }}</span>
+                      <span class="archetype-boardin-detail-pct">{{ pct(m.inclusion) }} of guides</span>
+                      <span class="archetype-boardin-detail-copies">{{ copiesLabel(m.avgCopies) }}</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="boardOutCards(a).length" class="archetype-boardin">
+              <h3 class="archetype-freq-title">What comes out</h3>
+              <p class="archetype-boardin-hint">
+                Cards this archetype boards out, ranked by how many matchups
+                they come out for. Click a card for the matchups.
+              </p>
+              <ul class="archetype-boardin-list">
+                <li
+                  v-for="(card, ci) in boardOutCards(a)"
+                  :key="'bo-' + card.name"
+                  class="archetype-boardin-card"
+                  :class="{ 'is-new-tier': isNewTierList(boardOutCards(a), ci) }"
+                >
+                  <button
+                    type="button"
+                    class="archetype-boardin-row"
+                    :aria-expanded="isCardExpanded(a, 'out:' + card.name) ? 'true' : 'false'"
+                    @click="toggleCard(a, 'out:' + card.name)"
+                  >
+                    <span class="archetype-boardin-chevron" aria-hidden="true">
+                      {{ isCardExpanded(a, 'out:' + card.name) ? '&#9662;' : '&#9656;' }}
+                    </span>
+                    <span class="archetype-boardin-name">{{ card.name }}</span>
+                    <span class="archetype-boardin-count">
+                      {{ matchupCountLabel(card.matchupCount) }}
+                    </span>
+                  </button>
+                  <ul v-if="isCardExpanded(a, 'out:' + card.name)" class="archetype-boardin-detail">
+                    <li
+                      v-for="m in card.matchups"
+                      :key="'bo-' + card.name + '-' + m.matchup"
+                      class="archetype-boardin-detail-row"
+                    >
+                      <span class="archetype-boardin-detail-vs">vs {{ m.matchup }}</span>
+                      <span class="archetype-boardin-detail-pct">{{ pct(m.inclusion) }} of guides</span>
+                      <span class="archetype-boardin-detail-copies">{{ copiesLabel(m.avgCopies) }}</span>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
             </div>
 
             <div class="archetype-guides">

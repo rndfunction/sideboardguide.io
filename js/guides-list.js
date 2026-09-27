@@ -66,7 +66,10 @@ export const GuideListMixin = {
         if (!payload || payload.format !== "mtg-sideboard-guide") {
           throw new Error("Not a valid guide file.");
         }
-        emit("load-share", payload);
+        // Emit the filename alongside the payload so the app can put the
+        // guide's identity in the URL (#guide/<file>). Without it the app
+        // receives only the payload and cannot name the loaded guide.
+        emit("load-share", payload, file);
       } catch (err) {
         this.error = "Could not load guide: " + String((err && err.message) || err);
       } finally {

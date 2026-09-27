@@ -187,10 +187,15 @@ including those with no entry for this matchup) that board it in.
 `avgCopies` is the mean `count` across the guides that board it in — not
 across all guides.
 
-**Scope note.** v2 covers board-IN only, not board-OUT. The OUT side of
-a sideboard plan is derived from what's cut, and a card being cut against
-a matchup is less actionable as aggregate data than a card being brought
-in. OUT analysis is a possible future direction.
+**v3 adds `boardOutMatrix`.** A mirror of `boardInMatrix`, aggregating
+the cards *boarded out* per matchup (plan entries with `dir === "out"`).
+Same shape and same derivation rules, just the OUT direction. The client
+renders it as a "What comes out" panel alongside "What comes in".
+
+`boardOutMatrix` is optional: a v2 index has no such field, and the
+client simply omits the "What comes out" panel. So the client accepts a
+v3 index (with both matrices), a v2 index (IN only), or a v1 index
+(neither), and renders whatever is present.
 
 Guide entry:
 

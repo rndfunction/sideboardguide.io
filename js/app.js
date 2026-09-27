@@ -4,6 +4,7 @@
 import DeckInput from "./components/DeckInput.js";
 import { EXAMPLE_GUIDE } from "./example-guide.js";
 import SampleCards from "./components/SampleCards.js";
+import ManaCurve from "./components/ManaCurve.js";
 import GuideToolbar from "./components/GuideToolbar.js";
 import DeckGrid from "./components/DeckGrid.js";
 import PrintView from "./components/PrintView.js";
@@ -12,7 +13,8 @@ import GuideBrowser from "./components/GuideBrowser.js";
 import GuideLibrary from "./components/GuideLibrary.js";
 import DeviceAuthDialog from "./components/DeviceAuthDialog.js";
 import { buildSharePayload } from "./persistence.js";
-import { submitGuide, suggestFilename } from "./guides.js";
+import { submitGuide, suggestFilename, loadGuide } from "./guides.js";
+import { currentRoute, writeRoute, onRouteChange } from "./router.js";
 import { getStoredToken, storeToken, clearToken, fetchUser } from "./githubauth.js";
 import {
   store,
@@ -60,7 +62,11 @@ const app = Vue.createApp({
       submitStatusClass: "ok",
       // Device flow auth state.
       showAuthDialog: false,
-      _pendingSubmit: null
+      _pendingSubmit: null,
+      // The repository filename of the currently loaded guide, or null if
+      // the guide was built from scratch. Drives the shareable URL and the
+      // toolbar's "Copy link" button.
+      loadedGuideFile: null
     };
   },
   computed: {
@@ -157,9 +163,17 @@ const app = Vue.createApp({
     onCloseGuideBrowser() {
       this.showGuideBrowser = false;
     },
-    async onLoadSharedGuide(parsed) {
+    async onLoadSharedGuide(parsed, file) {
       await this.onImportShare(parsed);
-      this.setMode("build");
+      // Remember which guide file this came from, so the URL can name it
+      // and so a re-route to the same guide is a no-op.
+      this.loadedGuideFile = file || null;
+      this.mode = "build";
+      this.syncHash();
+      // Close the community-guides modal if it was open. Loading a guide
+      // from that modal used to leave it up, so the user saw no change and
+      // thought nothing happened. Any guide load dismisses it now.
+      this.showGuideBrowser = false;
       // The user was scrolled down in the Browse list; jump to the top so
       // the freshly loaded guide is in view. Deferred a tick so it runs
       // after the Build view has rendered and settled the scroll.
@@ -279,9 +293,57 @@ const app = Vue.createApp({
     setMode(next) {
       if (next !== "build" && next !== "browse") return;
       this.mode = next;
-      if (typeof window !== "undefined" && window.history && window.history.replaceState) {
-        const hash = next === "browse" ? "#browse" : "";
-        window.history.replaceState(null, "", window.location.pathname + window.location.search + hash);
+      // Reflect the mode in the URL. Pushing a history entry (rather than
+      // replacing) is what makes the browser back button work. If a guide
+      // is loaded, keep its hash instead of overwriting it.
+      this.syncHash();
+    },
+    /**
+     * Write the current app state to the URL hash. Called whenever mode
+     * or the loaded guide changes from a user action. No-ops if the hash
+     * already matches (writeRoute checks), which keeps back/forward clean.
+     */
+    syncHash(opts) {
+      const route = { mode: this.mode };
+      // Only a Build route carries a guide file; in Browse the hash is
+      // just #browse.
+      if (this.mode === "build" && this.loadedGuideFile) {
+        route.guideFile = this.loadedGuideFile;
+      }
+      writeRoute(route, opts);
+    },
+    /**
+     * Apply a parsed route (from load, back/forward, or a shared link).
+     * Sets mode and, if the route names a guide, loads it. Guarded so it
+     * does not fight the user's own navigation (e.g. it will not re-load
+     * the guide already open).
+     */
+    async applyRoute(route) {
+      if (!route) return;
+      if (route.mode === "browse") {
+        this.mode = "browse";
+        return;
+      }
+      this.mode = "build";
+      if (route.guideFile && route.guideFile !== this.loadedGuideFile) {
+        await this.openGuideByFile(route.guideFile);
+      }
+    },
+    /**
+     * Load a guide by filename (from a URL). Reuses the same load path as
+     * clicking Open in Browse: fetch, then onLoadSharedGuide. A missing
+     * or invalid guide surfaces a friendly status rather than erroring.
+     */
+    async openGuideByFile(file) {
+      try {
+        const payload = await loadGuide(file);
+        if (!payload || payload.format !== "mtg-sideboard-guide") {
+          throw new Error("not a guide");
+        }
+        await this.onLoadSharedGuide(payload, file);
+      } catch (_) {
+        this.flashSubmit("That guide could not be loaded. Try Browse.", "error");
+        this.setMode("browse");
       }
     },
     onToggleMode() {
@@ -292,6 +354,7 @@ const app = Vue.createApp({
 
 app.component("deck-input", DeckInput);
 app.component("sample-cards", SampleCards);
+app.component("mana-curve", ManaCurve);
 app.component("guide-toolbar", GuideToolbar);
 app.component("deck-grid", DeckGrid);
 app.component("print-view", PrintView);
@@ -300,8 +363,16 @@ app.component("guide-browser", GuideBrowser);
 app.component("guide-library", GuideLibrary);
 app.component("device-auth-dialog", DeviceAuthDialog);
 
-// Handle ?preview=<url> before mounting: fetch that guide and load it.
+// Boot: resolve any ?preview= guide, mount the app ONCE, then apply either
+// the preview or the URL route, and subscribe to hash changes.
+//
+// Everything below runs against a single app instance. Mounting more than
+// once replaces the DOM and blanks the page, so there is exactly one
+// app.mount call here.
 (async () => {
+  // 1. ?preview=<url> -- fetch and parse BEFORE mounting, so the guide can
+  //    be loaded into the freshly-mounted instance.
+  let previewParsed = null;
   try {
     const params = new URLSearchParams(window.location.search);
     const previewUrl = params.get("preview");
@@ -311,16 +382,30 @@ app.component("device-auth-dialog", DeviceAuthDialog);
         const text = await res.text();
         const { parseShare } = await import("./persistence.js");
         const parsed = parseShare(text);
-        if (parsed && !parsed.error) {
-          // Apply after mount so reactive state flows through.
-          const appInstance = app.mount("#app");
-          await appInstance.onLoadSharedGuide(parsed);
-          return;
-        }
+        if (parsed && !parsed.error) previewParsed = parsed;
       }
     }
   } catch (_) {
-    // Fall through to normal mount.
+    // Ignore; fall through to a normal mount.
   }
-  app.mount("#app");
+
+  // 2. Mount ONCE.
+  const instance = app.mount("#app");
+
+  // 3. Apply the preview if present, otherwise apply the URL route.
+  //    (A preview URL is a one-off load, not an addressable route, so it
+  //    takes precedence and does not also apply the hash route.)
+  if (previewParsed) {
+    await instance.onLoadSharedGuide(previewParsed);
+  } else {
+    const initial = currentRoute();
+    if (initial.mode === "browse" || initial.guideFile) {
+      await instance.applyRoute(initial);
+    }
+  }
+
+  // 4. React to hash changes: back/forward, manual edits, shared links.
+  onRouteChange((route) => {
+    instance.applyRoute(route);
+  });
 })();

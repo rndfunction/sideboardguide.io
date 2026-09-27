@@ -116,6 +116,18 @@ const DeckGrid = {
         : this.matchups[0];
     }
   },
+  watch: {
+    // Mirror the resolved active matchup into the store so other
+    // components (the mana curve) can read which matchup is being
+    // planned. Immediate so it populates on mount, and it re-fires when
+    // the matchup list or the selection changes.
+    activeMatchup: {
+      immediate: true,
+      handler(name) {
+        store.activeMatchup = name || null;
+      }
+    }
+  },
   mounted() {
     document.addEventListener("click", this.onDocumentClick);
     document.addEventListener("keydown", this.onDocumentKey);
