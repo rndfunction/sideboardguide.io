@@ -208,17 +208,13 @@ body {
 
 .deck-input-grid {
   display: grid;
-  /* One surface for the whole deck-input area: the grid itself carries
-     the charcoal background, border, radius, and padding, so the
-     textarea and the button panel sit inside a single card that spans
-     the full workspace width. This matches the loaded/collapsed state's
-     surface, so the empty state reads as the same thing with less in
-     it, rather than a different layout.
-     Three columns: the textarea (capped, hugs the left), the button
-     panel at its natural 14rem, and a flexible empty third column whose
-     area is the same charcoal -- so the "whitespace" is part of the
-     surface, not the page behind it. */
-  grid-template-columns: minmax(0, 300px) 14rem minmax(0, 1fr);
+  /* The card hugs its content: button panel (14rem) + textarea (<=300px),
+     nothing more. The right edge of the card lands just past the
+     textarea, so the space between the card and the preview pane is the
+     page background rather than more charcoal. fit-content makes the
+     grid sized to its columns instead of filling the workspace column. */
+  grid-template-columns: 14rem minmax(0, 300px);
+  width: fit-content;
   gap: 1rem;
   align-items: stretch;
   background: var(--site-surface-alt);
@@ -1137,15 +1133,18 @@ table.guide-table tr.section-row td {
    scale them down with a CSS transform so they fit in the preview pane.
    This guarantees the sample always matches production output. */
 .sample-mini-wrap {
-  width: 1.95in;
-  height: 2.72in;
+  /* Sized to the visible (scaled) card: a full card is 2.48in x 3.46in;
+     at scale 0.89 that is ~2.2in x 3.08in. Larger than the previous
+     1.95in minis so the samples read as real cards, not thumbnails. */
+  width: 2.2in;
+  height: 3.08in;
   position: relative;
   overflow: hidden;
   flex: 0 0 auto;
 }
 
 .sample-mini-wrap > .print-card {
-  transform: scale(0.75);
+  transform: scale(0.89);
   transform-origin: top left;
   box-shadow: 0 4px 14px rgba(0,0,0,0.35);
 }
@@ -2054,7 +2053,11 @@ table.guide-table tr.section-row.sideboard-divider td {
 .app-two-col,
 .app-two-col.app-two-col-loaded {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  /* One ratio for both states, no flip on load. The input column is
+     narrower than before (was 2fr) so the preview column is wider, which
+     lets the sample cards on the empty screen render larger (near full
+     size) and gives the loaded print preview more room too. */
+  grid-template-columns: minmax(0, 1.3fr) minmax(360px, 1fr);
   gap: 1.25rem;
   align-items: start;
   margin-top: 0.5rem;
@@ -2122,6 +2125,23 @@ table.guide-table tr.section-row.sideboard-divider td {
 .sample-cards {
   margin: 0;
   text-align: center;
+}
+
+/* The empty-state headline. Large and full-color so it is the page's
+   focal point: the site's "why" before the input's "how". The emphasis
+   on "plan" ties the headline to the product. */
+.sample-cards-headline {
+  margin: 0 0 1rem;
+  font-size: 1.9rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--site-text);
+}
+
+.sample-cards-headline em {
+  font-style: italic;
+  color: var(--site-accent);
 }
 
 .sample-cards-row {

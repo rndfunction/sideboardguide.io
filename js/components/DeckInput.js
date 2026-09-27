@@ -264,23 +264,6 @@ const DeckInput = {
         </p>
 
         <div class="deck-input-grid">
-          <div
-            class="deck-input-textarea-wrap"
-            :class="{ 'drag-over': dragOver }"
-            @drop="onDrop"
-            @dragover="onDragOver"
-            @dragleave="onDragLeave"
-          >
-            <textarea
-              id="decklist-input"
-              ref="textareaEl"
-              class="usa-textarea"
-              :placeholder="placeholder"
-              v-model="text"
-              spellcheck="false"
-            ></textarea>
-          </div>
-
           <aside class="deck-input-side">
             <input
               ref="fileInput"
@@ -322,6 +305,23 @@ const DeckInput = {
               {{ fileError }}
             </div>
           </aside>
+
+          <div
+            class="deck-input-textarea-wrap"
+            :class="{ 'drag-over': dragOver }"
+            @drop="onDrop"
+            @dragover="onDragOver"
+            @dragleave="onDragLeave"
+          >
+            <textarea
+              id="decklist-input"
+              ref="textareaEl"
+              class="usa-textarea"
+              :placeholder="placeholder"
+              v-model="text"
+              spellcheck="false"
+            ></textarea>
+          </div>
         </div>
 
         <div class="deck-input-actions">

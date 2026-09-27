@@ -112,10 +112,10 @@ const SampleCards = {
     }
   },
   template: `
-    <div class="sample-cards" aria-hidden="true">
-      <p class="sample-cards-caption">Here's the guide you'll make &mdash; sized for your deckbox:</p>
+    <div class="sample-cards">
+      <h2 class="sample-cards-headline">Turn your decklist into a deck<em>plan</em></h2>
 
-      <div class="sample-cards-row">
+      <div class="sample-cards-row" aria-hidden="true">
         <div class="sample-mini-wrap">
           <print-title-card
             :deck-name="deckName"
