@@ -61,31 +61,69 @@ let presetsLoaded = false;
  * Safe to call multiple times — subsequent calls are no-ops once a
  * successful load has happened.
  */
+// The guides repository serves the machine-refreshed presets.json, the
+// same place the manifest and archetype index live. Defined here rather
+// than imported from guides.js to avoid a circular import (guides.js
+// imports from persistence.js).
+const REMOTE_PRESETS_URL =
+  "https://raw.githubusercontent.com/rndfunction/SideboardGuides/main/presets.json";
+
+/**
+ * Merge a parsed presets object ({ formats: { name: [strings] } }) into
+ * PRESET_MATCHUPS. Returns true if anything was merged. Shared by the
+ * remote and local fetch paths.
+ */
+function mergePresets(data) {
+  if (!data || !data.formats || typeof data.formats !== "object") return false;
+  const clean = {};
+  for (const [fmt, list] of Object.entries(data.formats)) {
+    if (Array.isArray(list)) {
+      clean[fmt] = list.filter((s) => typeof s === "string" && s.trim());
+    }
+  }
+  if (!Object.keys(clean).length) return false;
+  for (const [fmt, list] of Object.entries(clean)) {
+    PRESET_MATCHUPS[fmt] = list;
+  }
+  return true;
+}
+
 export async function loadPresets() {
   if (presetsLoaded) return PRESET_MATCHUPS;
+
+  // Remote first: the GitHub Action refreshes presets.json in the guides
+  // repository weekly, so this is the current list of meta deck names.
   try {
-    const res = await fetch("presets.json", { cache: "no-cache" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    if (data && data.formats && typeof data.formats === "object") {
-      const clean = {};
-      for (const [fmt, list] of Object.entries(data.formats)) {
-        if (Array.isArray(list)) {
-          clean[fmt] = list.filter((s) => typeof s === "string" && s.trim());
-        }
-      }
-      if (Object.keys(clean).length) {
-        // Merge into the existing map (keep any built-in formats the
-        // JSON doesn't mention).
-        for (const [fmt, list] of Object.entries(clean)) {
-          PRESET_MATCHUPS[fmt] = list;
-        }
+    const res = await fetch(REMOTE_PRESETS_URL, { cache: "no-cache" });
+    if (res.ok) {
+      const data = await res.json();
+      if (mergePresets(data)) {
+        presetsLoaded = true;
+        return PRESET_MATCHUPS;
       }
     }
-    presetsLoaded = true;
   } catch (_) {
-    // Keep the built-in fallback; don't mark as loaded so a retry is possible.
+    // Fall through to the local copy.
   }
+
+  // Local fallback: the copy shipped in this repository, used when the
+  // remote is unreachable (offline, sandboxed preview, etc.).
+  try {
+    const res = await fetch("presets.json", { cache: "no-cache" });
+    if (res.ok) {
+      const data = await res.json();
+      if (mergePresets(data)) {
+        presetsLoaded = true;
+        return PRESET_MATCHUPS;
+      }
+    }
+  } catch (_) {
+    // Fall through to the built-in fallback.
+  }
+
+  // Built-in fallback: whatever PRESET_MATCHUPS already holds (the
+  // hand-curated defaults at the top of this file). Don't mark as loaded
+  // so a retry is possible on a later call.
   return PRESET_MATCHUPS;
 }
 
